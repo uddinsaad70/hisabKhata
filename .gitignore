@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Expo & React Native
+.expo/
+.expo-shared/
+dist/
+web-build/
+android/
+ios/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Local SQLite database & WAL files
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Testing & Build outputs
+coverage/
+build/
+*.tsbuildinfo
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+*.log
