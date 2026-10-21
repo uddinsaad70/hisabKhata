@@ -1,63 +1,92 @@
 // apps/mobile/app/(tabs)/index.tsx
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { COLORS, getThemeColors } from "../../constants/theme";
+import React from "react";
+import {
+  Platform,
+  Pressable,
+  SafeAreaView,
+  StatusBar as RNStatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useUiStore } from "../../store/uiStore";
+import { getThemeColors } from "../../constants/theme";
 import { formatCurrency } from "../../utils/formatCurrency";
 
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets();
   const activeBusinessName = useUiStore((state) => state.activeBusinessName);
   const activeHomeTab = useUiStore((state) => state.activeHomeTab);
   const setActiveHomeTab = useUiStore((state) => state.setActiveHomeTab);
   const themeMode = useUiStore((state) => state.themeMode);
-  const theme = getThemeColors(themeMode);
+
+  const colors = getThemeColors(themeMode);
 
   return (
-    <View
-      style={[styles.screen, { backgroundColor: theme.pageBackgroundGrey }]}
-    >
-      {/* Top App Bar & Header Tabs (Section 2.1.1 & 2.1.2) */}
-      <View
-        style={[
-          styles.headerContainer,
-          {
-            backgroundColor: theme.primaryBlue,
-            paddingTop: Math.max(insets.top, 12),
-          },
-        ]}
+    <View style={[styles.root, { backgroundColor: colors.pageBackgroundGrey }]}>
+      {/* Top Royal Blue Header Container */}
+      <SafeAreaView
+        style={[styles.headerSafeArea, { backgroundColor: colors.primaryBlue }]}
       >
-        {/* Top Row: Ledger Icon + Business Switcher Pill on Left, Sync Status Icon on Right */}
-        <View style={styles.topAppBarRow}>
+        <View style={[styles.topBar, { backgroundColor: colors.primaryBlue }]}>
+          {/* Left: Business Switcher Pill Button */}
           <Pressable
-            style={styles.businessSelectorPill}
             accessibilityRole="button"
             accessibilityLabel="Switch business"
+            style={[
+              styles.businessSelector,
+              { backgroundColor: colors.darkHeaderAccent },
+            ]}
           >
-            <Text style={styles.bookIcon}>📒</Text>
+            <View style={styles.businessIconBadge}>
+              <Ionicons
+                name="storefront-outline"
+                size={16}
+                color={colors.activeTabIndicator}
+              />
+            </View>
             <Text style={styles.businessNameText} numberOfLines={1}>
               {activeBusinessName}
             </Text>
-            <Text style={styles.dropdownChevron}>⌄</Text>
+            <Ionicons
+              name="chevron-down"
+              size={16}
+              color="#FFFFFF"
+              style={styles.dropdownChevron}
+            />
           </Pressable>
 
-          <View style={styles.syncStatusBadge}>
-            <Text style={styles.syncStatusIcon}>☁️✓</Text>
+          {/* Right: Cloud Sync Status Indicator */}
+          <View
+            style={[
+              styles.syncStatusPill,
+              { backgroundColor: colors.darkHeaderAccent },
+            ]}
+          >
+            <Ionicons name="cloud-done-outline" size={18} color="#FFFFFF" />
           </View>
         </View>
 
-        {/* Main Header Tabs: CUSTOMERS | CASHBOOK with #FFC107 Active Indicator */}
-        <View style={styles.headerTabsRow}>
+        {/* Header Tabs: CUSTOMERS | CASHBOOK */}
+        <View
+          style={[
+            styles.headerTabsRow,
+            { backgroundColor: colors.primaryBlue },
+          ]}
+        >
           <Pressable
-            style={[
-              styles.headerTabButton,
-              activeHomeTab === "customers" && styles.headerTabButtonActive,
-            ]}
-            onPress={() => setActiveHomeTab("customers")}
             accessibilityRole="tab"
             accessibilityState={{ selected: activeHomeTab === "customers" }}
+            onPress={() => setActiveHomeTab("customers")}
+            style={[
+              styles.headerTabButton,
+              activeHomeTab === "customers" && {
+                borderBottomColor: colors.activeTabIndicator,
+              },
+            ]}
           >
             <Text
+              numberOfLines={1}
               style={[
                 styles.headerTabText,
                 activeHomeTab === "customers" && styles.headerTabTextActive,
@@ -68,15 +97,18 @@ export default function HomeScreen() {
           </Pressable>
 
           <Pressable
-            style={[
-              styles.headerTabButton,
-              activeHomeTab === "cashbook" && styles.headerTabButtonActive,
-            ]}
-            onPress={() => setActiveHomeTab("cashbook")}
             accessibilityRole="tab"
             accessibilityState={{ selected: activeHomeTab === "cashbook" }}
+            onPress={() => setActiveHomeTab("cashbook")}
+            style={[
+              styles.headerTabButton,
+              activeHomeTab === "cashbook" && {
+                borderBottomColor: colors.activeTabIndicator,
+              },
+            ]}
           >
             <Text
+              numberOfLines={1}
               style={[
                 styles.headerTabText,
                 activeHomeTab === "cashbook" && styles.headerTabTextActive,
@@ -86,67 +118,82 @@ export default function HomeScreen() {
             </Text>
           </Pressable>
         </View>
-      </View>
+      </SafeAreaView>
 
-      {/* Main Content Area: Switches instantly between CUSTOMERS and CASHBOOK views */}
-      <View style={styles.contentArea}>
+      {/* Main Content Area */}
+      <View style={styles.contentContainer}>
         {activeHomeTab === "customers" ? (
           <View
             style={[
-              styles.previewCard,
+              styles.summaryCard,
               {
-                backgroundColor: theme.cardSurface,
-                borderColor: theme.borderDivider,
+                backgroundColor: colors.cardSurface,
+                borderColor: colors.borderDivider,
               },
             ]}
           >
-            <Text
-              style={[styles.previewTitle, { color: theme.primaryTextDark }]}
-            >
-              Customers Ledger View
-            </Text>
+            <View style={styles.cardHeaderRow}>
+              <Ionicons
+                name="people-outline"
+                size={20}
+                color={colors.primaryBlue}
+              />
+              <Text
+                style={[styles.sectionTitle, { color: colors.primaryTextDark }]}
+              >
+                Customers Ledger View
+              </Text>
+            </View>
             <Text
               style={[
-                styles.previewSubtitle,
-                { color: theme.secondaryMutedText },
+                styles.sectionSubtitle,
+                { color: colors.secondaryMutedText },
               ]}
             >
               Summary card, live search, filters, and customer list will connect
               here in CP06.
             </Text>
-            <View style={styles.sampleBalanceRow}>
-              <View style={styles.sampleBalanceCol}>
+
+            <View
+              style={[
+                styles.summaryPreviewRow,
+                { borderTopColor: colors.borderDivider },
+              ]}
+            >
+              <View style={styles.summaryColumn}>
                 <Text
                   style={[
-                    styles.sampleLabel,
-                    { color: theme.secondaryMutedText },
+                    styles.summaryLabel,
+                    { color: colors.secondaryMutedText },
                   ]}
                 >
                   You will give
                 </Text>
                 <Text
-                  style={[styles.sampleAmount, { color: COLORS.primaryGreen }]}
+                  style={[styles.summaryAmount, { color: colors.primaryGreen }]}
                 >
                   {formatCurrency(0, "BDT")}
                 </Text>
               </View>
+
               <View
                 style={[
                   styles.verticalDivider,
-                  { backgroundColor: theme.borderDivider },
+                  { backgroundColor: colors.borderDivider },
                 ]}
               />
-              <View style={styles.sampleBalanceCol}>
+
+              <View style={styles.summaryColumn}>
                 <Text
                   style={[
-                    styles.sampleLabel,
-                    { color: theme.secondaryMutedText },
+                    styles.summaryLabel,
+                    { color: colors.secondaryMutedText },
                   ]}
                 >
                   You will get
                 </Text>
                 <Text
-                  style={[styles.sampleAmount, { color: COLORS.primaryRed }]}
+                  style={[styles.summaryAmount, { color: colors.primaryRed }]}
                 >
                   {formatCurrency(0, "BDT")}
                 </Text>
@@ -156,63 +203,78 @@ export default function HomeScreen() {
         ) : (
           <View
             style={[
-              styles.previewCard,
+              styles.summaryCard,
               {
-                backgroundColor: theme.cardSurface,
-                borderColor: theme.borderDivider,
+                backgroundColor: colors.cardSurface,
+                borderColor: colors.borderDivider,
               },
             ]}
           >
-            <Text
-              style={[styles.previewTitle, { color: theme.primaryTextDark }]}
-            >
-              Cashbook View
-            </Text>
+            <View style={styles.cardHeaderRow}>
+              <Ionicons
+                name="wallet-outline"
+                size={20}
+                color={colors.primaryBlue}
+              />
+              <Text
+                style={[styles.sectionTitle, { color: colors.primaryTextDark }]}
+              >
+                Cashbook View
+              </Text>
+            </View>
             <Text
               style={[
-                styles.previewSubtitle,
-                { color: theme.secondaryMutedText },
+                styles.sectionSubtitle,
+                { color: colors.secondaryMutedText },
               ]}
             >
-              Daily Cash in Hand, Online balance split, and IN/OUT entries will
-              connect here in CP11.
+              Total Balance, Today&apos;s Balance, Cash in Hand / Online split,
+              and daily entries will connect here in CP11.
             </Text>
-            <View style={styles.sampleBalanceRow}>
-              <View style={styles.sampleBalanceCol}>
+
+            <View
+              style={[
+                styles.summaryPreviewRow,
+                { borderTopColor: colors.borderDivider },
+              ]}
+            >
+              <View style={styles.summaryColumn}>
                 <Text
                   style={[
-                    styles.sampleLabel,
-                    { color: theme.secondaryMutedText },
+                    styles.summaryLabel,
+                    { color: colors.secondaryMutedText },
                   ]}
                 >
                   Total Balance
                 </Text>
                 <Text
                   style={[
-                    styles.sampleAmount,
-                    { color: theme.primaryTextDark },
+                    styles.summaryAmount,
+                    { color: colors.primaryTextDark },
                   ]}
                 >
                   {formatCurrency(0, "BDT")}
                 </Text>
               </View>
+
               <View
                 style={[
                   styles.verticalDivider,
-                  { backgroundColor: theme.borderDivider },
+                  { backgroundColor: colors.borderDivider },
                 ]}
               />
-              <View style={styles.sampleBalanceCol}>
+
+              <View style={styles.summaryColumn}>
                 <Text
                   style={[
-                    styles.sampleLabel,
-                    { color: theme.secondaryMutedText },
+                    styles.summaryLabel,
+                    { color: colors.secondaryMutedText },
                   ]}
                 >
-                  {"Today's Balance"}
+                  Today&apos;s Balance
                 </Text>
                 <Text
-                  style={[styles.sampleAmount, { color: COLORS.primaryGreen }]}
+                  style={[styles.summaryAmount, { color: colors.primaryGreen }]}
                 >
                   {formatCurrency(0, "BDT")}
                 </Text>
@@ -226,121 +288,127 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  root: {
     flex: 1,
   },
-  headerContainer: {
-    paddingHorizontal: 16,
-    elevation: 4,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+  headerSafeArea: {
+    paddingTop:
+      Platform.OS === "android" ? (RNStatusBar.currentHeight ?? 0) : 0,
   },
-  topAppBarRow: {
+  topBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
   },
-  businessSelectorPill: {
+  businessSelector: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.darkHeaderAccent,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 20,
     maxWidth: "78%",
   },
-  bookIcon: {
-    fontSize: 15,
+  businessIconBadge: {
     marginRight: 8,
+    alignItems: "center",
+    justifyContent: "center",
   },
   businessNameText: {
-    color: COLORS.cardSurface,
+    color: "#FFFFFF",
+    fontFamily: "Inter_700Bold",
     fontSize: 15,
-    fontWeight: "700",
-    marginRight: 6,
+    paddingRight: 2,
   },
   dropdownChevron: {
-    color: COLORS.cardSurface,
-    fontSize: 14,
-    fontWeight: "700",
+    marginLeft: 4,
   },
-  syncStatusBadge: {
+  syncStatusPill: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: COLORS.darkHeaderAccent,
-  },
-  syncStatusIcon: {
-    color: COLORS.cardSurface,
-    fontSize: 13,
-    fontWeight: "600",
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerTabsRow: {
     flexDirection: "row",
-    marginTop: 6,
+    marginTop: 4,
   },
   headerTabButton: {
     flex: 1,
     alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 12,
+    paddingHorizontal: 8,
     borderBottomWidth: 3,
     borderBottomColor: "transparent",
   },
-  headerTabButtonActive: {
-    borderBottomColor: COLORS.activeTabIndicator,
-  },
   headerTabText: {
+    width: "100%",
+    textAlign: "center",
     color: "rgba(255, 255, 255, 0.72)",
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 0.6,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    letterSpacing: 0.5,
   },
   headerTabTextActive: {
-    color: COLORS.cardSurface,
+    color: "#FFFFFF",
+    fontFamily: "Inter_700Bold",
   },
-  contentArea: {
+  contentContainer: {
     flex: 1,
     padding: 16,
   },
-  previewCard: {
+  summaryCard: {
     borderRadius: 12,
-    padding: 18,
+    padding: 16,
     borderWidth: 1,
   },
-  previewTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    marginBottom: 6,
-  },
-  previewSubtitle: {
-    fontSize: 13,
-    lineHeight: 19,
-    marginBottom: 16,
-  },
-  sampleBalanceRow: {
+  cardHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(107, 114, 128, 0.2)",
+    gap: 8,
   },
-  sampleBalanceCol: {
+  sectionTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+    flexShrink: 1,
+  },
+  sectionSubtitle: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    marginTop: 6,
+    lineHeight: 19,
+  },
+  summaryPreviewRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+  },
+  summaryColumn: {
     flex: 1,
     alignItems: "center",
+    paddingHorizontal: 4,
   },
   verticalDivider: {
     width: 1,
-    height: 36,
+    height: 40,
   },
-  sampleLabel: {
+  summaryLabel: {
+    width: "100%",
+    textAlign: "center",
+    fontFamily: "Inter_500Medium",
     fontSize: 12,
     marginBottom: 4,
   },
-  sampleAmount: {
-    fontSize: 18,
-    fontWeight: "700",
+  summaryAmount: {
+    width: "100%",
+    textAlign: "center",
+    fontFamily: "Inter_700Bold",
+    fontSize: 19,
   },
 });

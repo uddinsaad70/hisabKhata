@@ -1,24 +1,46 @@
 // apps/mobile/app/_layout.tsx
 import "react-native-get-random-values";
+import React from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { COLORS } from "../constants/theme";
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from "@expo-google-fonts/inter";
+import { useUiStore } from "../store/uiStore";
+import { getThemeColors } from "../constants/theme";
 
 export default function RootLayout() {
+  const themeMode = useUiStore((state) => state.themeMode);
+  const colors = getThemeColors(themeMode);
+
+  // Load crisp Inter typography weights for fintech numbers and labels
+  useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
   return (
-    <SafeAreaProvider>
+    <>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: COLORS.primaryBlue },
-          headerTintColor: COLORS.cardSurface,
-          headerTitleStyle: { fontWeight: "700" },
+          headerStyle: { backgroundColor: colors.primaryBlue },
+          headerTintColor: "#FFFFFF",
+          headerTitleStyle: {
+            fontFamily: "Inter_700Bold",
+            fontWeight: "700",
+          },
+          contentStyle: { backgroundColor: colors.pageBackgroundGrey },
         }}
       >
-        {/* Main bottom-tab workspace (renders its own custom Royal Blue header) */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
-    </SafeAreaProvider>
+    </>
   );
 }
