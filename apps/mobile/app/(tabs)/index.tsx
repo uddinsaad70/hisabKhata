@@ -1,5 +1,5 @@
 // apps/mobile/app/(tabs)/index.tsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Platform,
   Pressable,
@@ -13,6 +13,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useUiStore } from "../../store/uiStore";
 import { getThemeColors } from "../../constants/theme";
 import { formatCurrency } from "../../utils/formatCurrency";
+import { initializeAppDatabase } from "../../db/client";
+import { type DatabaseHealthSummary } from "../../db/migrations";
 
 export default function HomeScreen() {
   const activeBusinessName = useUiStore((state) => state.activeBusinessName);
@@ -21,6 +23,14 @@ export default function HomeScreen() {
   const themeMode = useUiStore((state) => state.themeMode);
 
   const colors = getThemeColors(themeMode);
+
+  const [dbHealth, setDbHealth] = useState<DatabaseHealthSummary | null>(null);
+
+  useEffect(() => {
+    initializeAppDatabase()
+      .then((summary) => setDbHealth(summary))
+      .catch(() => setDbHealth(null));
+  }, []);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.pageBackgroundGrey }]}>
@@ -122,6 +132,40 @@ export default function HomeScreen() {
 
       {/* Main Content Area */}
       <View style={styles.contentContainer}>
+        {dbHealth && (
+          <View
+            style={[
+              styles.dbStatusBadge,
+              {
+                backgroundColor: dbHealth.isReady
+                  ? colors.lightGreenBadgeTint
+                  : colors.lightPinkColumnTint,
+                borderColor: dbHealth.isReady
+                  ? colors.primaryGreen
+                  : colors.primaryRed,
+              },
+            ]}
+          >
+            <Ionicons
+              name={dbHealth.isReady ? "checkmark-circle" : "alert-circle"}
+              size={16}
+              color={dbHealth.isReady ? colors.primaryGreen : colors.primaryRed}
+            />
+            <Text
+              style={[
+                styles.dbStatusText,
+                {
+                  color: dbHealth.isReady
+                    ? colors.primaryGreen
+                    : colors.primaryRed,
+                },
+              ]}
+            >
+              {`SQLite v${dbHealth.userVersion} Ready • ${dbHealth.tableCount} Tables • ${dbHealth.indexCount} Indexes Active`}
+            </Text>
+          </View>
+        )}
+
         {activeHomeTab === "customers" ? (
           <View
             style={[
@@ -360,6 +404,21 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     padding: 16,
+  },
+  dbStatusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 12,
+    gap: 8,
+  },
+  dbStatusText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    flexShrink: 1,
   },
   summaryCard: {
     borderRadius: 12,
