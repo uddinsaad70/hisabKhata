@@ -289,10 +289,7 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
-  headerSafeArea: {
-    paddingTop:
-      Platform.OS === "android" ? (RNStatusBar.currentHeight ?? 0) : 0,
-  },
+  headerSafeArea: {},
   topBar: {
     flexDirection: "row",
     alignItems: "center",
