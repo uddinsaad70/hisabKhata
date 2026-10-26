@@ -1,11 +1,19 @@
 // apps/mobile/app/customer/[id]/index.tsx
-import React, { useCallback, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useState, useEffect } from "react";
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  DeviceEventEmitter,
+} from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
 import { Ionicons } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
 
+import { UndoSnackbar } from "../../../components/UndoSnackbar";
 import { useUiStore } from "../../../store/uiStore";
 import { getThemeColors } from "../../../constants/theme";
 import { formatCurrency, isSettled } from "../../../utils/formatCurrency";
@@ -57,6 +65,12 @@ export default function CustomerLedgerScreen() {
       void loadData();
     }, [loadData]),
   );
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener("REFRESH_LEDGER", () => {
+      void loadData();
+    });
+    return () => sub.remove();
+  }, [loadData]);
 
   const handleCall = () => {
     if (customer?.phone) {
@@ -402,6 +416,7 @@ export default function CustomerLedgerScreen() {
           </Text>
         </Pressable>
       </View>
+      <UndoSnackbar />
     </View>
   );
 }

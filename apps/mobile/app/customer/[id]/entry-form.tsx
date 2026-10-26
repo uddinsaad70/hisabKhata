@@ -1,5 +1,5 @@
 // apps/mobile/app/customer/[id]/entry-form.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Platform,
   Pressable,
@@ -18,6 +18,8 @@ import { getThemeColors } from "../../../constants/theme";
 import { getDbAdapter } from "../../../db/client";
 import {
   addCustomerEntry,
+  updateCustomerEntry,
+  getCustomerEntryById,
   type CustomerEntryType,
 } from "../../../db/customerQueries";
 import {
@@ -32,10 +34,12 @@ import {
 } from "../../../utils/dateUtils";
 
 export default function CustomerEntryFormScreen() {
-  const { id, type } = useLocalSearchParams<{
+  const { id, type, entryId } = useLocalSearchParams<{
     id: string;
     type: CustomerEntryType;
+    entryId?: string;
   }>();
+  const isEditing = !!entryId;
   const router = useRouter();
 
   const themeMode = useUiStore((state) => state.themeMode);
@@ -53,7 +57,7 @@ export default function CustomerEntryFormScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Evaluate the current math expression (আপডেট করা হয়েছে)
+  // Evaluate the current math expression
   const handleEvaluate = () => {
     if (/[\+\-\×\÷\%]/.test(amountStr)) {
       const result = evaluateExpression(amountStr);
@@ -84,6 +88,25 @@ export default function CustomerEntryFormScreen() {
       return prev.slice(0, -1);
     });
   };
+  useEffect(() => {
+    if (isEditing && entryId && activeBusinessId) {
+      (async () => {
+        const db = await getDbAdapter();
+        const existingEntry = await getCustomerEntryById(
+          db,
+          activeBusinessId,
+          entryId,
+        );
+        if (existingEntry) {
+          setAmountStr(existingEntry.amount.toString());
+          setDetails(existingEntry.details || "");
+          if (existingEntry.timestamp) {
+            setEntryDate(new Date(existingEntry.timestamp));
+          }
+        }
+      })();
+    }
+  }, [entryId, isEditing, activeBusinessId]);
 
   // Save Entry to Database
   const handleSave = async () => {
@@ -120,16 +143,31 @@ export default function CustomerEntryFormScreen() {
     setIsSubmitting(true);
     try {
       const db = await getDbAdapter();
-      await addCustomerEntry(db, {
-        businessId: activeBusinessId,
-        customerId: id,
-        type: type as CustomerEntryType,
-        amount: numAmount,
-        details: details.trim() || null,
-        entryDate: localDateStr,
-        entryTime: getLocalTimeString(entryDate),
-        timestamp: entryDate.getTime(),
-      });
+
+      if (isEditing && entryId) {
+        await updateCustomerEntry(db, {
+          entryId,
+          businessId: activeBusinessId,
+          customerId: id,
+          type: type as CustomerEntryType,
+          amount: numAmount,
+          details: details.trim() || null,
+          entryDate: localDateStr,
+          entryTime: getLocalTimeString(entryDate),
+          timestamp: entryDate.getTime(),
+        });
+      } else {
+        await addCustomerEntry(db, {
+          businessId: activeBusinessId,
+          customerId: id,
+          type: type as CustomerEntryType,
+          amount: numAmount,
+          details: details.trim() || null,
+          entryDate: localDateStr,
+          entryTime: getLocalTimeString(entryDate),
+          timestamp: entryDate.getTime(),
+        });
+      }
 
       router.back();
     } catch (error: any) {
