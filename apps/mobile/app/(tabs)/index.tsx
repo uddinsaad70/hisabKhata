@@ -3,21 +3,25 @@ import React, { useEffect, useState } from "react";
 import {
   Platform,
   Pressable,
-  SafeAreaView,
   StatusBar as RNStatusBar,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useUiStore } from "../../store/uiStore";
 import { getThemeColors } from "../../constants/theme";
 import { formatCurrency } from "../../utils/formatCurrency";
-import { initializeAppDatabase } from "../../db/client";
+import { getDbAdapter, initializeAppDatabase } from "../../db/client";
 import { type DatabaseHealthSummary } from "../../db/migrations";
 import { BusinessSwitcherModal } from "../../components/BusinessSwitcherModal";
+import { getAllBusinesses } from "../../db/businessQueries";
+import { CustomersTabView } from "../../components/CustomersTabView";
 
 export default function HomeScreen() {
+  const activeBusinessId = useUiStore((state) => state.activeBusinessId);
+  const setActiveBusiness = useUiStore((state) => state.setActiveBusiness);
   const activeBusinessName = useUiStore((state) => state.activeBusinessName);
   const activeBusinessCurrency = useUiStore(
     (state) => state.activeBusinessCurrency,
@@ -33,7 +37,23 @@ export default function HomeScreen() {
 
   useEffect(() => {
     initializeAppDatabase()
-      .then((summary) => setDbHealth(summary))
+      .then(async (summary) => {
+        setDbHealth(summary);
+
+        if (!useUiStore.getState().activeBusinessId) {
+          const db = await getDbAdapter();
+          const businesses = await getAllBusinesses(db);
+          if (businesses.length > 0) {
+            useUiStore
+              .getState()
+              .setActiveBusiness(
+                businesses[0].id,
+                businesses[0].name,
+                businesses[0].currency,
+              );
+          }
+        }
+      })
       .catch(() => setDbHealth(null));
   }, []);
 
@@ -173,83 +193,7 @@ export default function HomeScreen() {
         )}
 
         {activeHomeTab === "customers" ? (
-          <View
-            style={[
-              styles.summaryCard,
-              {
-                backgroundColor: colors.cardSurface,
-                borderColor: colors.borderDivider,
-              },
-            ]}
-          >
-            <View style={styles.cardHeaderRow}>
-              <Ionicons
-                name="people-outline"
-                size={20}
-                color={colors.primaryBlue}
-              />
-              <Text
-                style={[styles.sectionTitle, { color: colors.primaryTextDark }]}
-              >
-                Customers Ledger View
-              </Text>
-            </View>
-            <Text
-              style={[
-                styles.sectionSubtitle,
-                { color: colors.secondaryMutedText },
-              ]}
-            >
-              Summary card, live search, filters, and customer list will connect
-              here in CP06.
-            </Text>
-
-            <View
-              style={[
-                styles.summaryPreviewRow,
-                { borderTopColor: colors.borderDivider },
-              ]}
-            >
-              <View style={styles.summaryColumn}>
-                <Text
-                  style={[
-                    styles.summaryLabel,
-                    { color: colors.secondaryMutedText },
-                  ]}
-                >
-                  You will give
-                </Text>
-                <Text
-                  style={[styles.summaryAmount, { color: colors.primaryGreen }]}
-                >
-                  {formatCurrency(0, activeBusinessCurrency)}
-                </Text>
-              </View>
-
-              <View
-                style={[
-                  styles.verticalDivider,
-                  { backgroundColor: colors.borderDivider },
-                ]}
-              />
-
-              <View style={styles.summaryColumn}>
-                <Text
-                  style={[
-                    styles.summaryLabel,
-                    { color: colors.secondaryMutedText },
-                  ]}
-                >
-                  You will get
-                </Text>
-                <Text
-                  style={[styles.summaryAmount, { color: colors.primaryRed }]}
-                >
-                  {formatCurrency(0, activeBusinessCurrency)}
-                </Text>
-              </View>
-            </View>
-          </View>
+          <CustomersTabView />
         ) : (
           <View
             style={[
