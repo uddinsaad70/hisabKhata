@@ -1,6 +1,7 @@
 // apps/mobile/store/uiStore.ts
 import { create } from "zustand";
 import { type ThemeMode } from "../constants/theme";
+import { type CurrencyCode } from "../utils/formatCurrency";
 
 /**
  * Top header tab options on the Home screen (Section 2.1 of Specification).
@@ -40,6 +41,7 @@ export interface UiStoreState {
   // Active business context (NULL until first business is created or loaded)
   activeBusinessId: string | null;
   activeBusinessName: string;
+  activeBusinessCurrency: CurrencyCode;
 
   // Active header tab inside the Home screen: CUSTOMERS | CASHBOOK
   activeHomeTab: HomeTab;
@@ -56,7 +58,11 @@ export interface UiStoreState {
   undoSnackbar: UndoSnackbarState;
 
   // State mutation actions
-  setActiveBusiness: (id: string | null, name?: string) => void;
+  setActiveBusiness: (
+    id: string | null,
+    name?: string,
+    currency?: CurrencyCode,
+  ) => void;
   setActiveHomeTab: (tab: HomeTab) => void;
   setCustomerSearchQuery: (query: string) => void;
   setCustomerFilter: (filter: CustomerFilter) => void;
@@ -88,6 +94,7 @@ const INITIAL_SNACKBAR_STATE: UndoSnackbarState = {
 export const useUiStore = create<UiStoreState>((set) => ({
   activeBusinessId: null,
   activeBusinessName: "My Business",
+  activeBusinessCurrency: "BDT",
   activeHomeTab: "customers",
   customerSearchQuery: "",
   customerFilter: "ALL",
@@ -95,10 +102,11 @@ export const useUiStore = create<UiStoreState>((set) => ({
   themeMode: "light",
   undoSnackbar: INITIAL_SNACKBAR_STATE,
 
-  setActiveBusiness: (id, name) =>
+  setActiveBusiness: (id, name, currency) =>
     set((state) => ({
       activeBusinessId: id,
       activeBusinessName: name ?? state.activeBusinessName,
+      activeBusinessCurrency: currency ?? state.activeBusinessCurrency,
     })),
 
   setActiveHomeTab: (tab) => set({ activeHomeTab: tab }),

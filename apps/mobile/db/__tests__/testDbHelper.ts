@@ -90,3 +90,11 @@ export function createInMemoryDatabase(): TestDatabaseContext {
     },
   };
 }
+
+/**
+ * Helper used by query test suites (e.g. businessQueries.test.ts).
+ * Returns TestDatabaseContext containing { adapter, rawDb, close }.
+ */
+export function createInMemoryDatabaseAdapter(): TestDatabaseContext {
+  return createInMemoryDatabase();
+}

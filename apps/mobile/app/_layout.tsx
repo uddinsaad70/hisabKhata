@@ -2,7 +2,7 @@
 import "react-native-get-random-values";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
   useFonts,
@@ -13,10 +13,19 @@ import {
 } from "@expo-google-fonts/inter";
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
-import { initializeAppDatabase } from "../db/client";
+import { getDbAdapter, initializeAppDatabase } from "../db/client";
+import {
+  getAllBusinesses,
+  getOrInitDeviceSyncState,
+} from "../db/businessQueries";
 
 export default function RootLayout() {
+  const router = useRouter();
+  const segments = useSegments();
+
   const themeMode = useUiStore((state) => state.themeMode);
+  const activeBusinessId = useUiStore((state) => state.activeBusinessId);
+  const setActiveBusiness = useUiStore((state) => state.setActiveBusiness);
   const colors = getThemeColors(themeMode);
 
   // Load crisp Inter typography weights for fintech numbers and labels
@@ -28,18 +37,31 @@ export default function RootLayout() {
   });
 
   const [dbInitialized, setDbInitialized] = useState<boolean>(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState<boolean>(false);
   const [dbError, setDbError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    initializeAppDatabase()
-      .then(() => {
-        if (isMounted) {
-          setDbInitialized(true);
+    async function setupDbAndBusiness() {
+      try {
+        await initializeAppDatabase();
+        const db = await getDbAdapter();
+        await getOrInitDeviceSyncState(db);
+        const businesses = await getAllBusinesses(db);
+
+        if (!isMounted) return;
+
+        if (businesses.length === 0) {
+          setNeedsOnboarding(true);
+        } else {
+          const current =
+            businesses.find((b) => b.id === activeBusinessId) ?? businesses[0];
+          setActiveBusiness(current.id, current.name, current.currency);
+          setNeedsOnboarding(false);
         }
-      })
-      .catch((err: unknown) => {
+        setDbInitialized(true);
+      } catch (err: unknown) {
         if (isMounted) {
           const message =
             err instanceof Error
@@ -47,12 +69,33 @@ export default function RootLayout() {
               : "Unknown database initialization error";
           setDbError(message);
         }
-      });
+      }
+    }
+
+    setupDbAndBusiness();
 
     return () => {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if ((!fontsLoaded && !fontError) || !dbInitialized) return;
+
+    const inOnboarding = (segments[0] as string) === "onboarding";
+    if (needsOnboarding && !activeBusinessId && !inOnboarding) {
+      router.replace("/onboarding" as any);
+    } else if (activeBusinessId && inOnboarding) {
+      router.replace("/(tabs)");
+    }
+  }, [
+    fontsLoaded,
+    fontError,
+    dbInitialized,
+    needsOnboarding,
+    activeBusinessId,
+    segments,
+  ]);
 
   if (dbError) {
     return (
@@ -96,6 +139,7 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       </Stack>
     </>
   );

@@ -69,3 +69,15 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
   }
   return adapterInstance;
 }
+
+/**
+ * Synchronous getter for the initialized DatabaseAdapter instance.
+ * Used by screens and modals after `initializeAppDatabase()` has completed in `_layout.tsx`.
+ */
+export function getDbAdapter(): DatabaseAdapter {
+  if (!adapterInstance) {
+    const rawDb = SQLite.openDatabaseSync(DATABASE_FILE_NAME);
+    adapterInstance = createExpoSqliteAdapter(rawDb);
+  }
+  return adapterInstance;
+}

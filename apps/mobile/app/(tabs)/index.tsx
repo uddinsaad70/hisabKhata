@@ -15,9 +15,13 @@ import { getThemeColors } from "../../constants/theme";
 import { formatCurrency } from "../../utils/formatCurrency";
 import { initializeAppDatabase } from "../../db/client";
 import { type DatabaseHealthSummary } from "../../db/migrations";
+import { BusinessSwitcherModal } from "../../components/BusinessSwitcherModal";
 
 export default function HomeScreen() {
   const activeBusinessName = useUiStore((state) => state.activeBusinessName);
+  const activeBusinessCurrency = useUiStore(
+    (state) => state.activeBusinessCurrency,
+  );
   const activeHomeTab = useUiStore((state) => state.activeHomeTab);
   const setActiveHomeTab = useUiStore((state) => state.setActiveHomeTab);
   const themeMode = useUiStore((state) => state.themeMode);
@@ -25,6 +29,7 @@ export default function HomeScreen() {
   const colors = getThemeColors(themeMode);
 
   const [dbHealth, setDbHealth] = useState<DatabaseHealthSummary | null>(null);
+  const [switcherVisible, setSwitcherVisible] = useState<boolean>(false);
 
   useEffect(() => {
     initializeAppDatabase()
@@ -43,6 +48,7 @@ export default function HomeScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Switch business"
+            onPress={() => setSwitcherVisible(true)}
             style={[
               styles.businessSelector,
               { backgroundColor: colors.darkHeaderAccent },
@@ -216,7 +222,7 @@ export default function HomeScreen() {
                 <Text
                   style={[styles.summaryAmount, { color: colors.primaryGreen }]}
                 >
-                  {formatCurrency(0, "BDT")}
+                  {formatCurrency(0, activeBusinessCurrency)}
                 </Text>
               </View>
 
@@ -239,7 +245,7 @@ export default function HomeScreen() {
                 <Text
                   style={[styles.summaryAmount, { color: colors.primaryRed }]}
                 >
-                  {formatCurrency(0, "BDT")}
+                  {formatCurrency(0, activeBusinessCurrency)}
                 </Text>
               </View>
             </View>
@@ -297,7 +303,7 @@ export default function HomeScreen() {
                     { color: colors.primaryTextDark },
                   ]}
                 >
-                  {formatCurrency(0, "BDT")}
+                  {formatCurrency(0, activeBusinessCurrency)}
                 </Text>
               </View>
 
@@ -320,13 +326,17 @@ export default function HomeScreen() {
                 <Text
                   style={[styles.summaryAmount, { color: colors.primaryGreen }]}
                 >
-                  {formatCurrency(0, "BDT")}
+                  {formatCurrency(0, activeBusinessCurrency)}
                 </Text>
               </View>
             </View>
           </View>
         )}
       </View>
+      <BusinessSwitcherModal
+        visible={switcherVisible}
+        onClose={() => setSwitcherVisible(false)}
+      />
     </View>
   );
 }
