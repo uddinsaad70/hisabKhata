@@ -3,6 +3,7 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import { type CashbookDailyReportRow } from "../db/cashbookQueries";
+import { type CustomerReportEntryRow } from "../db/customerQueries";
 import { formatCurrency, type CurrencyCode } from "./formatCurrency";
 
 export interface CashbookPdfReportParams {
@@ -271,5 +272,192 @@ export async function printOrSaveCashbookPdf(
   params: CashbookPdfReportParams,
 ): Promise<void> {
   const html = buildCashbookReportHtml(params);
+  await Print.printAsync({ html });
+}
+
+export interface CustomerPdfReportParams {
+  businessName: string;
+  reportTitle: string; // e.g., "Saad - Ledger Statement" or "All Customers Report"
+  currency: CurrencyCode;
+  startDate: string;
+  endDate: string;
+  totalGave: number;
+  totalGot: number;
+  netBalance: number;
+  rows: CustomerReportEntryRow[];
+  showCustomerName: boolean;
+}
+
+/**
+ * Generates HTML markup for Customer Ledger / All Customers PDF Report.
+ */
+function buildCustomerReportHtml(params: CustomerPdfReportParams): string {
+  const {
+    businessName,
+    reportTitle,
+    currency,
+    startDate,
+    endDate,
+    totalGave,
+    totalGot,
+    netBalance,
+    rows,
+    showCustomerName,
+  } = params;
+
+  const netColor =
+    netBalance < 0 ? "#DC2626" : netBalance > 0 ? "#16A34A" : "#374151";
+  const netLabel =
+    netBalance < 0
+      ? "You will get"
+      : netBalance > 0
+        ? "You will give"
+        : "Settled";
+  const generatedAt = new Date().toLocaleString();
+
+  const tableRowsHtml =
+    rows.length === 0
+      ? `<tr><td colspan="4" style="text-align: center; padding: 24px; color: #6B7280;">No transactions found in this date range.</td></tr>`
+      : rows
+          .map((row) => {
+            const balColor = row.running_balance < 0 ? "#DC2626" : "#16A34A";
+            return `
+              <tr>
+                <td>
+                  <div style="font-weight: 600; color: #111827;">${escapeHtml(row.entry_date)} • ${escapeHtml(row.entry_time)}</div>
+                  ${showCustomerName ? `<div style="font-size: 12px; font-weight: 600; color: #1E40AF;">${escapeHtml(row.customer_name)}</div>` : ""}
+                  ${row.details ? `<div style="font-size: 11px; color: #6B7280;">${escapeHtml(row.details)}</div>` : ""}
+                </td>
+                <td style="text-align: right; color: #DC2626; font-weight: 600; background-color: #FFF1F2;">
+                  ${row.type === "GAVE" ? formatCurrency(row.amount, currency, false) : "—"}
+                </td>
+                <td style="text-align: right; color: #16A34A; font-weight: 600;">
+                  ${row.type === "GOT" ? formatCurrency(row.amount, currency, false) : "—"}
+                </td>
+                <td style="text-align: right; color: ${balColor}; font-weight: 700;">
+                  ${formatCurrency(Math.abs(row.running_balance), currency, true)}
+                </td>
+              </tr>
+            `;
+          })
+          .join("");
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1F2937; margin: 0; padding: 24px; }
+          .header { border-bottom: 2px solid #1E40AF; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+          .biz-name { font-size: 22px; font-weight: 700; color: #1E40AF; margin: 0 0 4px 0; }
+          .report-title { font-size: 14px; font-weight: 600; color: #4B5563; margin: 0; }
+          .date-range { text-align: right; font-size: 12px; color: #374151; }
+          .summary-box { display: flex; border: 1px solid #E5E7EB; border-radius: 8px; margin-bottom: 20px; background-color: #F9FAFB; overflow: hidden; }
+          .summary-item { flex: 1; padding: 12px; text-align: center; border-right: 1px solid #E5E7EB; }
+          .summary-item:last-child { border-right: none; }
+          .summary-label { font-size: 11px; color: #6B7280; text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
+          .summary-val { font-size: 16px; font-weight: 700; }
+          table { width: 100%; border-collapse: collapse; font-size: 13px; }
+          th { background-color: #F3F4F6; color: #4B5563; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 10px 8px; border-bottom: 1px solid #D1D5DB; text-align: right; }
+          th:first-child { text-align: left; }
+          td { padding: 10px 8px; border-bottom: 1px solid #E5E7EB; }
+          .footer { margin-top: 28px; text-align: center; font-size: 11px; color: #9CA3AF; border-top: 1px solid #E5E7EB; padding-top: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h1 class="biz-name">${escapeHtml(businessName)}</h1>
+            <p class="report-title">${escapeHtml(reportTitle)}</p>
+          </div>
+          <div class="date-range">
+            <div><strong>Period:</strong> ${escapeHtml(startDate)} to ${escapeHtml(endDate)}</div>
+            <div style="color: #6B7280; margin-top: 2px;">Generated: ${escapeHtml(generatedAt)}</div>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-item">
+            <div class="summary-label">Total You Gave</div>
+            <div class="summary-val" style="color: #DC2626;">${formatCurrency(totalGave, currency, true)}</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Total You Got</div>
+            <div class="summary-val" style="color: #16A34A;">${formatCurrency(totalGot, currency, true)}</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Net (${netLabel})</div>
+            <div class="summary-val" style="color: ${netColor};">${formatCurrency(Math.abs(netBalance), currency, true)}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Date & Details</th>
+              <th>You Gave</th>
+              <th>You Got</th>
+              <th>Running Bal.</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRowsHtml}
+          </tbody>
+        </table>
+
+        <div class="footer">Generated by HisabKhata App</div>
+      </body>
+    </html>
+  `;
+}
+
+/**
+ * Generates and shares Customer Ledger PDF via WhatsApp or native share sheet.
+ */
+export async function generateAndShareCustomerPdf(
+  params: CustomerPdfReportParams,
+): Promise<void> {
+  const html = buildCustomerReportHtml(params);
+
+  const { uri, base64 } = await Print.printToFileAsync({
+    html,
+    base64: true,
+  });
+
+  const safeTitle = params.reportTitle.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const safeStart = params.startDate.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const safeEnd = params.endDate.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const fileName = `${safeTitle}_${safeStart}_to_${safeEnd}.pdf`;
+  const baseDir =
+    FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? "";
+  let targetUri = uri;
+
+  if (baseDir && base64) {
+    targetUri = `${baseDir}${fileName}`;
+    await FileSystem.writeAsStringAsync(targetUri, base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+  }
+
+  const canShare = await Sharing.isAvailableAsync();
+  if (canShare) {
+    await Sharing.shareAsync(targetUri, {
+      mimeType: "application/pdf",
+      dialogTitle: `Share ${params.reportTitle}`,
+      UTI: "com.adobe.pdf",
+    });
+  } else {
+    await Print.printAsync({ html });
+  }
+}
+
+/**
+ * Opens native system print/save-as-PDF preview dialog for Customer Report.
+ */
+export async function printOrSaveCustomerPdf(
+  params: CustomerPdfReportParams,
+): Promise<void> {
+  const html = buildCustomerReportHtml(params);
   await Print.printAsync({ html });
 }

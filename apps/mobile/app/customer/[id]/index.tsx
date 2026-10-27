@@ -177,10 +177,10 @@ export default function CustomerLedgerScreen() {
             ]}
           />
           <Pressable
-            style={styles.reportBtn}
             onPress={() =>
-              router.push(`/customer/${customer.id}/report` as never)
+              router.push(`/customer/report?customerId=${id}` as never)
             }
+            style={[styles.reportBtn, { borderTopColor: colors.borderDivider }]}
           >
             <Ionicons
               name="document-text-outline"

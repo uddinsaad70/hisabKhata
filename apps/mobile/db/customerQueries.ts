@@ -709,3 +709,90 @@ export async function softDeleteCustomerCascade(
     );
   });
 }
+
+export interface CustomerReportEntryRow {
+  id: string;
+  customer_id: string;
+  customer_name: string;
+  type: CustomerEntryType;
+  amount: number;
+  details: string | null;
+  entry_date: string;
+  entry_time: string;
+  timestamp: number;
+  running_balance: number;
+}
+
+/**
+ * Fetches customer ledger entries filtered by date range (for a single customer or all customers),
+ * computing cumulative running balance before applying the date range filter.
+ */
+export async function getCustomerReportEntries(
+  db: DatabaseAdapter,
+  businessId: string,
+  startDate: string,
+  endDate: string,
+  customerId?: string,
+): Promise<CustomerReportEntryRow[]> {
+  if (customerId) {
+    return db.getAllAsync<CustomerReportEntryRow>(
+      `WITH ledger_with_balance AS (
+         SELECT
+           ce.id,
+           ce.customer_id,
+           c.name AS customer_name,
+           ce.type,
+           ce.amount,
+           ce.details,
+           ce.entry_date,
+           ce.entry_time,
+           ce.timestamp,
+           ROUND(
+             SUM(CASE WHEN ce.type = 'GAVE' THEN -ce.amount ELSE ce.amount END)
+             OVER (ORDER BY ce.entry_date ASC, ce.timestamp ASC, ce.id ASC),
+             2
+           ) AS running_balance
+         FROM customer_entries ce
+         INNER JOIN customers c ON c.id = ce.customer_id
+         WHERE ce.business_id = ?
+           AND ce.customer_id = ?
+           AND ce.is_deleted = 0
+       )
+       SELECT *
+       FROM ledger_with_balance
+       WHERE entry_date BETWEEN ? AND ?
+       ORDER BY entry_date DESC, timestamp DESC, id DESC;`,
+      [businessId, customerId, startDate, endDate],
+    );
+  }
+
+  return db.getAllAsync<CustomerReportEntryRow>(
+    `WITH ledger_with_balance AS (
+       SELECT
+         ce.id,
+         ce.customer_id,
+         c.name AS customer_name,
+         ce.type,
+         ce.amount,
+         ce.details,
+         ce.entry_date,
+         ce.entry_time,
+         ce.timestamp,
+         ROUND(
+           SUM(CASE WHEN ce.type = 'GAVE' THEN -ce.amount ELSE ce.amount END)
+           OVER (ORDER BY ce.entry_date ASC, ce.timestamp ASC, ce.id ASC),
+           2
+         ) AS running_balance
+       FROM customer_entries ce
+       INNER JOIN customers c ON c.id = ce.customer_id
+       WHERE ce.business_id = ?
+         AND ce.is_deleted = 0
+           AND c.is_deleted = 0
+     )
+     SELECT *
+     FROM ledger_with_balance
+     WHERE entry_date BETWEEN ? AND ?
+     ORDER BY entry_date DESC, timestamp DESC, id DESC;`,
+    [businessId, startDate, endDate],
+  );
+}

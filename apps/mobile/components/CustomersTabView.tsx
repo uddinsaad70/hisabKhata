@@ -97,7 +97,7 @@ export function CustomersTabView() {
   };
 
   const handleViewAllReports = () => {
-    router.push("/customer/report-all" as never);
+    router.push("/customer/report" as never);
   };
 
   return (
