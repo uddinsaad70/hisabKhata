@@ -225,7 +225,10 @@ export function CashbookTabView() {
           </View>
         </View>
 
-        <Pressable style={styles.reportBtnMain}>
+        <Pressable
+          onPress={() => router.push("/cashbook/report" as never)}
+          style={styles.reportBtnMain}
+        >
           <Ionicons
             name="document-text-outline"
             size={16}
