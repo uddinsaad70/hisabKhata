@@ -18,6 +18,8 @@ import { getThemeColors } from "../../constants/theme";
 import { getDbAdapter } from "../../db/client";
 import {
   addCashbookEntry,
+  updateCashbookEntry,
+  getCashbookEntryById,
   type CashbookEntryType,
   type PaymentMode,
 } from "../../db/cashbookQueries";
@@ -33,7 +35,11 @@ import {
 } from "../../utils/dateUtils";
 
 export default function CashbookEntryFormScreen() {
-  const { type } = useLocalSearchParams<{ type: CashbookEntryType }>();
+  const { type, entryId } = useLocalSearchParams<{
+    type: CashbookEntryType;
+    entryId?: string;
+  }>();
+  const isEditing = Boolean(entryId);
   const router = useRouter();
 
   const themeMode = useUiStore((state) => state.themeMode);
@@ -50,6 +56,28 @@ export default function CashbookEntryFormScreen() {
   const [entryDate, setEntryDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load existing entry data when opening in Edit mode
+  useEffect(() => {
+    if (isEditing && entryId && activeBusinessId) {
+      (async () => {
+        const db = await getDbAdapter();
+        const existingEntry = await getCashbookEntryById(
+          db,
+          activeBusinessId,
+          entryId,
+        );
+        if (existingEntry) {
+          setAmountStr(existingEntry.amount.toString());
+          setDetails(existingEntry.details || "");
+          setPaymentMode(existingEntry.payment_mode);
+          if (existingEntry.timestamp) {
+            setEntryDate(new Date(existingEntry.timestamp));
+          }
+        }
+      })();
+    }
+  }, [entryId, isEditing, activeBusinessId]);
 
   const handleEvaluate = () => {
     if (/[\+\-\×\÷\%]/.test(amountStr)) {
@@ -113,17 +141,33 @@ export default function CashbookEntryFormScreen() {
     setIsSubmitting(true);
     try {
       const db = await getDbAdapter();
-      await addCashbookEntry(db, {
-        businessId: activeBusinessId,
-        type: type as CashbookEntryType,
-        paymentMode,
-        amount: numAmount,
-        details: details.trim() || null,
-        entryDate: localDateStr,
-        entryTime: getLocalTimeString(entryDate),
-        timestamp: entryDate.getTime(),
-      });
 
+      if (isEditing && entryId) {
+        // Update existing cashbook entry
+        await updateCashbookEntry(db, {
+          entryId,
+          businessId: activeBusinessId,
+          type: type as CashbookEntryType,
+          paymentMode,
+          amount: numAmount,
+          details: details.trim() || null,
+          entryDate: localDateStr,
+          entryTime: getLocalTimeString(entryDate),
+          timestamp: entryDate.getTime(),
+        });
+      } else {
+        // Create new cashbook entry
+        await addCashbookEntry(db, {
+          businessId: activeBusinessId,
+          type: type as CashbookEntryType,
+          paymentMode,
+          amount: numAmount,
+          details: details.trim() || null,
+          entryDate: localDateStr,
+          entryTime: getLocalTimeString(entryDate),
+          timestamp: entryDate.getTime(),
+        });
+      }
       router.back();
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to save cashbook entry.");

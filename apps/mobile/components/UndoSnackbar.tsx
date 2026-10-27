@@ -10,6 +10,7 @@ import {
 import { useUiStore } from "../store/uiStore";
 import { getDbAdapter } from "../db/client";
 import { undoDeleteCustomerEntry } from "../db/customerQueries";
+import { undoDeleteCashbookEntry } from "../db/cashbookQueries";
 
 export function UndoSnackbar() {
   const { visible, entryId, entryDomain, customerId, message } = useUiStore(
@@ -58,6 +59,10 @@ export function UndoSnackbar() {
           entryId,
         );
         DeviceEventEmitter.emit("REFRESH_LEDGER"); // Trigger UI refresh
+      } else if (entryDomain === "cashbook") {
+        // Restore deleted cashbook entry and refresh cashbook list
+        await undoDeleteCashbookEntry(db, activeBusinessId, entryId);
+        DeviceEventEmitter.emit("REFRESH_CASHBOOK");
       }
       closeSnackbar();
     } catch (error) {
