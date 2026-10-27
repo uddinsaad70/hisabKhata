@@ -415,3 +415,20 @@ export async function getCashbookDailyReport(
     [businessId, startDate, endDate],
   );
 }
+
+/**
+ * Fetches all active cashbook entries for the list view (grouped by date on UI).
+ */
+export async function getAllCashbookEntries(
+  db: DatabaseAdapter,
+  businessId: string,
+): Promise<CashbookEntryRow[]> {
+  return db.getAllAsync<CashbookEntryRow>(
+    `SELECT *
+     FROM cashbook_entries
+     WHERE business_id = ?
+       AND is_deleted = 0
+     ORDER BY entry_date DESC, timestamp DESC, id DESC;`,
+    [businessId],
+  );
+}

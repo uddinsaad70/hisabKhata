@@ -18,6 +18,7 @@ import { type DatabaseHealthSummary } from "../../db/migrations";
 import { BusinessSwitcherModal } from "../../components/BusinessSwitcherModal";
 import { getAllBusinesses } from "../../db/businessQueries";
 import { CustomersTabView } from "../../components/CustomersTabView";
+import { CashbookTabView } from "../../components/CashbookTabView";
 
 export default function HomeScreen() {
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
@@ -195,86 +196,7 @@ export default function HomeScreen() {
         {activeHomeTab === "customers" ? (
           <CustomersTabView />
         ) : (
-          <View
-            style={[
-              styles.summaryCard,
-              {
-                backgroundColor: colors.cardSurface,
-                borderColor: colors.borderDivider,
-              },
-            ]}
-          >
-            <View style={styles.cardHeaderRow}>
-              <Ionicons
-                name="wallet-outline"
-                size={20}
-                color={colors.primaryBlue}
-              />
-              <Text
-                style={[styles.sectionTitle, { color: colors.primaryTextDark }]}
-              >
-                Cashbook View
-              </Text>
-            </View>
-            <Text
-              style={[
-                styles.sectionSubtitle,
-                { color: colors.secondaryMutedText },
-              ]}
-            >
-              Total Balance, Today&apos;s Balance, Cash in Hand / Online split,
-              and daily entries will connect here in CP11.
-            </Text>
-
-            <View
-              style={[
-                styles.summaryPreviewRow,
-                { borderTopColor: colors.borderDivider },
-              ]}
-            >
-              <View style={styles.summaryColumn}>
-                <Text
-                  style={[
-                    styles.summaryLabel,
-                    { color: colors.secondaryMutedText },
-                  ]}
-                >
-                  Total Balance
-                </Text>
-                <Text
-                  style={[
-                    styles.summaryAmount,
-                    { color: colors.primaryTextDark },
-                  ]}
-                >
-                  {formatCurrency(0, activeBusinessCurrency)}
-                </Text>
-              </View>
-
-              <View
-                style={[
-                  styles.verticalDivider,
-                  { backgroundColor: colors.borderDivider },
-                ]}
-              />
-
-              <View style={styles.summaryColumn}>
-                <Text
-                  style={[
-                    styles.summaryLabel,
-                    { color: colors.secondaryMutedText },
-                  ]}
-                >
-                  Today&apos;s Balance
-                </Text>
-                <Text
-                  style={[styles.summaryAmount, { color: colors.primaryGreen }]}
-                >
-                  {formatCurrency(0, activeBusinessCurrency)}
-                </Text>
-              </View>
-            </View>
-          </View>
+          <CashbookTabView />
         )}
       </View>
       <BusinessSwitcherModal
