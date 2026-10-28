@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import { type ThemeMode } from "../constants/theme";
 import { type CurrencyCode } from "../utils/formatCurrency";
+export type AppLanguage = "en" | "bn";
 
 /**
  * Top header tab options on the Home screen (Section 2.1 of Specification).
@@ -45,6 +46,8 @@ export interface UiStoreState {
 
   // Active header tab inside the Home screen: CUSTOMERS | CASHBOOK
   activeHomeTab: HomeTab;
+  language: AppLanguage;
+  setLanguage: (lang: AppLanguage) => void;
 
   // Live search, filter, and sort state for the Customers tab
   customerSearchQuery: string;
@@ -96,6 +99,8 @@ export const useUiStore = create<UiStoreState>((set) => ({
   activeBusinessName: "My Business",
   activeBusinessCurrency: "BDT",
   activeHomeTab: "customers",
+  language: "en",
+  setLanguage: (language) => set({ language }),
   customerSearchQuery: "",
   customerFilter: "ALL",
   customerSort: "MOST_RECENT",

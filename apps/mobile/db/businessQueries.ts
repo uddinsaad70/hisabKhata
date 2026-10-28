@@ -217,3 +217,27 @@ export async function getOrInitDeviceSyncState(
     last_pushed_at: 0,
   };
 }
+
+/**
+ * Updates the name and currency of an existing business profile (CP15).
+ */
+export async function updateBusinessProfile(
+  db: DatabaseAdapter,
+  businessId: string,
+  name: string,
+  currency: CurrencyCode,
+): Promise<void> {
+  const trimmedName = validateBusinessName(name);
+  const validCurrency = validateCurrency(currency);
+  const now = Date.now();
+
+  await db.runAsync(
+    `UPDATE businesses
+     SET name = ?,
+         currency = ?,
+         updated_at = ?,
+         is_synced = 0
+     WHERE id = ? AND is_deleted = 0;`,
+    [trimmedName, validCurrency, now, businessId],
+  );
+}
