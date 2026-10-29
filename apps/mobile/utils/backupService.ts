@@ -1,5 +1,7 @@
 // apps/mobile/utils/backupService.ts
 import * as FileSystem from "expo-file-system/legacy";
+import * as DocumentPicker from "expo-document-picker";
+import { File as ExpoFile } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { type DatabaseAdapter } from "../db/adapter";
 import { getLocalDateString } from "./dateUtils";
@@ -12,6 +14,30 @@ export interface BackupStats {
 }
 
 /**
+ * Helper to read text content from a picked document URI safely inside Expo Go on Android/iOS.
+ */
+async function readPickedFileText(uri: string): Promise<string> {
+  try {
+    const file = new ExpoFile(uri);
+    const text = await file.text();
+    if (text) return text;
+  } catch {
+    // Fallback to next method
+  }
+
+  try {
+    return await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+  } catch {
+    // Fallback to next method
+  }
+
+  const response = await fetch(uri);
+  return await response.text();
+}
+
+/**
  * Queries SQLite for total active records and unsynced record counts for the active business.
  */
 export async function getBusinessBackupStats(
@@ -21,7 +47,7 @@ export async function getBusinessBackupStats(
   const custRow = await db.getFirstAsync<{ cnt: number; unsynced: number }>(
     `SELECT
        COUNT(CASE WHEN is_deleted = 0 THEN 1 END) AS cnt,
-       COUNT(CASE WHEN is_synced = 0 THEN 1 END) AS unsynced
+       COUNT(CASE WHEN is_deleted = 0 AND is_synced = 0 THEN 1 END) AS unsynced
      FROM customers
      WHERE business_id = ?;`,
     [businessId],
@@ -30,7 +56,7 @@ export async function getBusinessBackupStats(
   const ceRow = await db.getFirstAsync<{ cnt: number; unsynced: number }>(
     `SELECT
        COUNT(CASE WHEN is_deleted = 0 THEN 1 END) AS cnt,
-       COUNT(CASE WHEN is_synced = 0 THEN 1 END) AS unsynced
+       COUNT(CASE WHEN is_deleted = 0 AND is_synced = 0 THEN 1 END) AS unsynced
      FROM customer_entries
      WHERE business_id = ?;`,
     [businessId],
@@ -39,12 +65,11 @@ export async function getBusinessBackupStats(
   const cbRow = await db.getFirstAsync<{ cnt: number; unsynced: number }>(
     `SELECT
        COUNT(CASE WHEN is_deleted = 0 THEN 1 END) AS cnt,
-       COUNT(CASE WHEN is_synced = 0 THEN 1 END) AS unsynced
+       COUNT(CASE WHEN is_deleted = 0 AND is_synced = 0 THEN 1 END) AS unsynced
      FROM cashbook_entries
      WHERE business_id = ?;`,
     [businessId],
   );
-
   const totalCustomers = custRow?.cnt ?? 0;
   const totalCustomerEntries = ceRow?.cnt ?? 0;
   const totalCashbookEntries = cbRow?.cnt ?? 0;
@@ -119,4 +144,185 @@ export async function exportBusinessBackupJson(
       UTI: "public.json",
     });
   }
+
+  // Mark all active records of this business as backed up (is_synced = 1)
+  await db.runAsync(`UPDATE businesses SET is_synced = 1 WHERE id = ?;`, [
+    businessId,
+  ]);
+  await db.runAsync(
+    `UPDATE customers SET is_synced = 1 WHERE business_id = ? AND is_deleted = 0;`,
+    [businessId],
+  );
+  await db.runAsync(
+    `UPDATE customer_entries SET is_synced = 1 WHERE business_id = ? AND is_deleted = 0;`,
+    [businessId],
+  );
+  await db.runAsync(
+    `UPDATE cashbook_entries SET is_synced = 1 WHERE business_id = ? AND is_deleted = 0;`,
+    [businessId],
+  );
+}
+
+export interface RestoreBackupResult {
+  restored: boolean;
+  businessId?: string;
+  businessName?: string;
+  currency?: "BDT" | "INR";
+  customersCount?: number;
+  entriesCount?: number;
+}
+
+/**
+ * Opens the system document picker to select a HisabKhata JSON backup file
+ * and restores all business, customer, and cashbook records into SQLite.
+ */
+export async function pickAndRestoreBackupJson(
+  db: DatabaseAdapter,
+): Promise<RestoreBackupResult> {
+  const result = await DocumentPicker.getDocumentAsync({
+    type: ["application/json", "*/*"],
+    copyToCacheDirectory: false,
+  });
+
+  if (result.canceled || !result.assets || result.assets.length === 0) {
+    return { restored: false };
+  }
+
+  const fileUri = result.assets[0].uri;
+  const rawJson = await readPickedFileText(fileUri);
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(rawJson);
+  } catch {
+    throw new Error("Invalid file format. Please select a valid JSON backup.");
+  }
+
+  if (
+    !parsed ||
+    parsed.app !== "HisabKhata" ||
+    !parsed.business ||
+    !parsed.business.id
+  ) {
+    throw new Error("This file is not a valid HisabKhata backup.");
+  }
+
+  const biz = parsed.business;
+  const customers: any[] = Array.isArray(parsed.customers)
+    ? parsed.customers
+    : [];
+  const customerEntries: any[] = Array.isArray(parsed.customerEntries)
+    ? parsed.customerEntries
+    : [];
+  const cashbookEntries: any[] = Array.isArray(parsed.cashbookEntries)
+    ? parsed.cashbookEntries
+    : [];
+
+  const currency: "BDT" | "INR" = biz.currency === "INR" ? "INR" : "BDT";
+  const now = Date.now();
+
+  // 1. Upsert Business record
+  await db.runAsync(
+    `INSERT OR REPLACE INTO businesses (
+       id, name, currency, is_synced, is_deleted, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?);`,
+    [
+      biz.id,
+      biz.name || "Restored Business",
+      currency,
+      1,
+      0,
+      biz.created_at ?? now,
+      now,
+    ],
+  );
+
+  // 2. Upsert Customers
+  for (const c of customers) {
+    if (!c.id) continue;
+    const customerName = String(c.name || "Customer").trim();
+    const fallbackInitials =
+      customerName
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase() || "C";
+
+    await db.runAsync(
+      `INSERT OR REPLACE INTO customers (
+         id, business_id, name, phone, avatar_initials, is_synced, is_deleted, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      [
+        c.id,
+        biz.id,
+        customerName,
+        c.phone ?? null,
+        c.avatar_initials || fallbackInitials,
+        1,
+        c.is_deleted ?? 0,
+        c.created_at ?? now,
+        now,
+      ],
+    );
+  }
+
+  // 3. Upsert Customer Ledger Entries
+  for (const ce of customerEntries) {
+    if (!ce.id || !ce.customer_id) continue;
+    await db.runAsync(
+      `INSERT OR REPLACE INTO customer_entries (
+         id, business_id, customer_id, type, amount, details, entry_date, entry_time, timestamp, is_synced, is_deleted, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      [
+        ce.id,
+        biz.id,
+        ce.customer_id,
+        ce.type === "GOT" ? "GOT" : "GAVE",
+        Number(ce.amount) || 0,
+        ce.details ?? null,
+        ce.entry_date,
+        ce.entry_time,
+        ce.timestamp ?? now,
+        1,
+        ce.is_deleted ?? 0,
+        ce.created_at ?? now,
+        now,
+      ],
+    );
+  }
+
+  // 4. Upsert Cashbook Entries
+  for (const cb of cashbookEntries) {
+    if (!cb.id) continue;
+    await db.runAsync(
+      `INSERT OR REPLACE INTO cashbook_entries (
+         id, business_id, type, payment_mode, amount, details, entry_date, entry_time, timestamp, is_synced, is_deleted, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      [
+        cb.id,
+        biz.id,
+        cb.type === "IN" ? "IN" : "OUT",
+        cb.payment_mode === "ONLINE" ? "ONLINE" : "CASH",
+        Number(cb.amount) || 0,
+        cb.details ?? null,
+        cb.entry_date,
+        cb.entry_time,
+        cb.timestamp ?? now,
+        1,
+        cb.is_deleted ?? 0,
+        cb.created_at ?? now,
+        now,
+      ],
+    );
+  }
+
+  return {
+    restored: true,
+    businessId: biz.id,
+    businessName: biz.name || "Restored Business",
+    currency,
+    customersCount: customers.length,
+    entriesCount: customerEntries.length + cashbookEntries.length,
+  };
 }

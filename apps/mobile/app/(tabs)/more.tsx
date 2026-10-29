@@ -1,5 +1,12 @@
 // apps/mobile/app/(tabs)/more.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useFocusEffect } from "expo-router";
+import {
+  exportBusinessBackupJson,
+  getBusinessBackupStats,
+  pickAndRestoreBackupJson,
+  type BackupStats,
+} from "../../utils/backupService";
 import {
   getAppLockConfig,
   promptBiometricUnlock,
@@ -19,6 +26,7 @@ import {
   Text,
   TextInput,
   View,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useUiStore } from "../../store/uiStore";
@@ -153,6 +161,73 @@ export default function MoreSettingsScreen() {
     setIsBioEnabled(enable);
     await setBiometricUnlockEnabled(enable);
     await refreshLockConfig();
+  };
+
+  // CP17: Local Backup & Restore States
+  const [backupModalVisible, setBackupModalVisible] = useState(false);
+  const [isBackupBusy, setIsBackupBusy] = useState(false);
+  const [backupStats, setBackupStats] = useState<BackupStats>({
+    totalCustomers: 0,
+    totalCustomerEntries: 0,
+    totalCashbookEntries: 0,
+    unsyncedCount: 0,
+  });
+
+  const loadBackupStats = useCallback(async () => {
+    if (!activeBusinessId || Platform.OS === "web") return;
+    try {
+      const db = getDbAdapter();
+      const stats = await getBusinessBackupStats(db, activeBusinessId);
+      setBackupStats(stats);
+    } catch {
+      // Ignore stats error before DB is ready
+    }
+  }, [activeBusinessId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadBackupStats();
+    }, [loadBackupStats]),
+  );
+
+  const handleExportBackup = async () => {
+    if (!activeBusinessId || isBackupBusy) return;
+    setIsBackupBusy(true);
+    try {
+      const db = getDbAdapter();
+      await exportBusinessBackupJson(
+        db,
+        activeBusinessId,
+        activeBusinessName || "Business",
+      );
+      await loadBackupStats();
+    } catch (err: any) {
+      Alert.alert("Export Failed", err.message || "Could not export backup.");
+    } finally {
+      setIsBackupBusy(false);
+    }
+  };
+
+  const handleRestoreBackup = async () => {
+    if (isBackupBusy) return;
+    setIsBackupBusy(true);
+    try {
+      const db = getDbAdapter();
+      const res = await pickAndRestoreBackupJson(db);
+      if (res.restored && res.businessId && res.businessName && res.currency) {
+        setActiveBusiness(res.businessId, res.businessName, res.currency);
+        await loadBackupStats();
+        setBackupModalVisible(false);
+        Alert.alert(
+          "Backup Restored",
+          `Successfully restored "${res.businessName}" (${res.customersCount} customers, ${res.entriesCount} entries).`,
+        );
+      }
+    } catch (err: any) {
+      Alert.alert("Restore Failed", err.message || "Could not restore backup.");
+    } finally {
+      setIsBackupBusy(false);
+    }
   };
 
   return (
@@ -389,29 +464,48 @@ export default function MoreSettingsScreen() {
             style={[styles.divider, { backgroundColor: colors.borderDivider }]}
           />
 
-          <View style={styles.settingItemRow}>
+          {/* CP17: Local Backup & Restore */}
+          <Pressable
+            onPress={() => {
+              void loadBackupStats();
+              setBackupModalVisible(true);
+            }}
+            style={styles.settingItemRow}
+          >
             <Ionicons
               name="cloud-upload-outline"
               size={20}
-              color={colors.secondaryMutedText}
+              color={colors.primaryBlue}
               style={styles.rowIcon}
             />
             <View style={styles.textColumn}>
               <Text
                 style={[styles.settingTitle, { color: colors.primaryTextDark }]}
               >
-                Local Backup & Cloud Sync
+                Local Backup & Restore
               </Text>
               <Text
                 style={[
                   styles.settingDescription,
-                  { color: colors.secondaryMutedText },
+                  {
+                    color:
+                      backupStats.unsyncedCount === 0
+                        ? colors.primaryGreen
+                        : colors.secondaryMutedText,
+                  },
                 ]}
               >
-                Connects in CP17 & Phase 2
+                {backupStats.unsyncedCount === 0
+                  ? `All backed up (${backupStats.totalCustomers} Customers • ${backupStats.totalCustomerEntries + backupStats.totalCashbookEntries} Entries)`
+                  : `${backupStats.unsyncedCount} unsynced changes • Tap to backup`}
               </Text>
             </View>
-          </View>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={colors.secondaryMutedText}
+            />
+          </Pressable>
         </View>
       </View>
       {/* Edit Business Profile & Currency Modal */}
@@ -700,6 +794,135 @@ export default function MoreSettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* CP17: Local Backup & Restore Modal */}
+      <Modal
+        visible={backupModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBackupModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View
+            style={[styles.modalCard, { backgroundColor: colors.cardSurface }]}
+          >
+            <Text
+              style={[styles.modalTitle, { color: colors.primaryTextDark }]}
+            >
+              Local Backup & Restore
+            </Text>
+
+            <View
+              style={[
+                styles.statsBox,
+                {
+                  backgroundColor: colors.pageBackgroundGrey,
+                  borderColor: colors.borderDivider,
+                },
+              ]}
+            >
+              <View style={styles.statCol}>
+                <Text
+                  style={[styles.statVal, { color: colors.primaryTextDark }]}
+                >
+                  {backupStats.totalCustomers}
+                </Text>
+                <Text
+                  style={[styles.statLbl, { color: colors.secondaryMutedText }]}
+                >
+                  Customers
+                </Text>
+              </View>
+              <View style={styles.statCol}>
+                <Text
+                  style={[styles.statVal, { color: colors.primaryTextDark }]}
+                >
+                  {backupStats.totalCustomerEntries}
+                </Text>
+                <Text
+                  style={[styles.statLbl, { color: colors.secondaryMutedText }]}
+                >
+                  Ledger Entries
+                </Text>
+              </View>
+              <View style={styles.statCol}>
+                <Text
+                  style={[styles.statVal, { color: colors.primaryTextDark }]}
+                >
+                  {backupStats.totalCashbookEntries}
+                </Text>
+                <Text
+                  style={[styles.statLbl, { color: colors.secondaryMutedText }]}
+                >
+                  Cashbook
+                </Text>
+              </View>
+            </View>
+
+            <Pressable
+              onPress={() => void handleExportBackup()}
+              disabled={isBackupBusy}
+              style={[
+                styles.backupActionBtn,
+                { backgroundColor: colors.primaryGreen },
+              ]}
+            >
+              {isBackupBusy ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="download-outline" size={18} color="#FFFFFF" />
+                  <Text style={styles.backupActionText}>
+                    EXPORT BACKUP FILE (.JSON)
+                  </Text>
+                </>
+              )}
+            </Pressable>
+
+            <Pressable
+              onPress={() => void handleRestoreBackup()}
+              disabled={isBackupBusy}
+              style={[
+                styles.backupOutlineBtn,
+                { borderColor: colors.primaryBlue },
+              ]}
+            >
+              <Ionicons
+                name="folder-open-outline"
+                size={18}
+                color={colors.primaryBlue}
+              />
+              <Text
+                style={[
+                  styles.backupOutlineText,
+                  { color: colors.primaryBlue },
+                ]}
+              >
+                RESTORE FROM BACKUP FILE
+              </Text>
+            </Pressable>
+
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setBackupModalVisible(false)}
+                style={[
+                  styles.modalBtn,
+                  { borderColor: colors.borderDivider, borderWidth: 1 },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.modalBtnText,
+                    { color: colors.secondaryMutedText },
+                  ]}
+                >
+                  CLOSE
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -852,6 +1075,54 @@ const styles = StyleSheet.create({
   },
   changePinText: {
     fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+  },
+  statsBox: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  statCol: {
+    flex: 1,
+    alignItems: "center",
+  },
+  statVal: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 18,
+    marginBottom: 2,
+  },
+  statLbl: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 11,
+  },
+  backupActionBtn: {
+    height: 46,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  backupActionText: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
+  },
+  backupOutlineBtn: {
+    height: 46,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  backupOutlineText: {
+    fontFamily: "Inter_700Bold",
     fontSize: 13,
   },
 });
