@@ -18,6 +18,7 @@ import {
   getAllBusinesses,
   getOrInitDeviceSyncState,
 } from "../db/businessQueries";
+import { AppLockGate } from "../components/AppLockGate";
 
 export default function RootLayout() {
   const router = useRouter();
@@ -126,7 +127,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <AppLockGate>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
@@ -142,7 +143,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       </Stack>
-    </>
+    </AppLockGate>
   );
 }
 

@@ -1,5 +1,12 @@
 // apps/mobile/app/(tabs)/more.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import {
+  getAppLockConfig,
+  promptBiometricUnlock,
+  saveAndEnableAppLockPin,
+  setAppLockActive,
+  setBiometricUnlockEnabled,
+} from "../../utils/appLockService";
 import {
   Alert,
   Modal,
@@ -74,6 +81,80 @@ export default function MoreSettingsScreen() {
     }
   };
 
+  // CP16: App Lock States (PIN persists across ON/OFF toggles)
+  const [appLockModalVisible, setAppLockModalVisible] = useState(false);
+  const [isPinEnabled, setIsPinEnabled] = useState(false);
+  const [hasSavedPin, setHasSavedPin] = useState(false);
+  const [isBioEnabled, setIsBioEnabled] = useState(false);
+  const [isBioSupported, setIsBioSupported] = useState(false);
+  const [showPinInputForm, setShowPinInputForm] = useState(false);
+  const [newPin, setNewPin] = useState("");
+
+  const refreshLockConfig = async () => {
+    const cfg = await getAppLockConfig();
+    setIsPinEnabled(cfg.isPinEnabled);
+    setHasSavedPin(cfg.hasSavedPin);
+    setIsBioEnabled(cfg.isBiometricEnabled);
+    setIsBioSupported(cfg.isBiometricHardwareAvailable);
+  };
+
+  useEffect(() => {
+    void refreshLockConfig();
+  }, []);
+
+  const handleOpenAppLockModal = () => {
+    setNewPin("");
+    // Show PIN input box immediately only if no PIN is saved yet
+    setShowPinInputForm(!hasSavedPin);
+    setAppLockModalVisible(true);
+  };
+
+  // Toggle App Lock ON/OFF using the existing saved PIN
+  const handleToggleAppLockSwitch = async (enable: boolean) => {
+    if (enable && !hasSavedPin) {
+      setShowPinInputForm(true);
+      return;
+    }
+    await setAppLockActive(enable);
+    await refreshLockConfig();
+  };
+
+  const handleSavePin = async () => {
+    if (!/^\d{4}$/.test(newPin)) {
+      Alert.alert("Invalid PIN", "Please enter an exact 4-digit numeric PIN.");
+      return;
+    }
+    try {
+      await saveAndEnableAppLockPin(
+        newPin,
+        isBioSupported ? isBioEnabled : false,
+      );
+      setNewPin("");
+      setShowPinInputForm(false);
+      await refreshLockConfig();
+      Alert.alert("PIN Saved", "Your 4-digit App Lock PIN is active.");
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Could not save PIN.");
+    }
+  };
+
+  // Verify fingerprint immediately when user toggles Biometric ON
+  const handleToggleBiometric = async (enable: boolean) => {
+    if (enable) {
+      const verified = await promptBiometricUnlock();
+      if (!verified) {
+        Alert.alert(
+          "Verification Failed",
+          "Could not verify your fingerprint.",
+        );
+        return;
+      }
+    }
+    setIsBioEnabled(enable);
+    await setBiometricUnlockEnabled(enable);
+    await refreshLockConfig();
+  };
+
   return (
     <View style={[styles.root, { backgroundColor: colors.pageBackgroundGrey }]}>
       <SafeAreaView
@@ -84,7 +165,6 @@ export default function MoreSettingsScreen() {
           <Text style={styles.headerSubtitle}>{activeBusinessName}</Text>
         </View>
       </SafeAreaView>
-
       <View style={styles.content}>
         {/* Appearance Card: Light / Dark Theme Toggle */}
         <View
@@ -264,11 +344,15 @@ export default function MoreSettingsScreen() {
             style={[styles.divider, { backgroundColor: colors.borderDivider }]}
           />
 
-          <View style={styles.settingItemRow}>
+          {/* CP16: App Lock (PIN & Biometric) */}
+          <Pressable
+            onPress={handleOpenAppLockModal}
+            style={styles.settingItemRow}
+          >
             <Ionicons
-              name="lock-closed-outline"
+              name={isPinEnabled ? "lock-closed" : "lock-open-outline"}
               size={20}
-              color={colors.secondaryMutedText}
+              color={isPinEnabled ? colors.primaryGreen : colors.primaryBlue}
               style={styles.rowIcon}
             />
             <View style={styles.textColumn}>
@@ -280,13 +364,26 @@ export default function MoreSettingsScreen() {
               <Text
                 style={[
                   styles.settingDescription,
-                  { color: colors.secondaryMutedText },
+                  {
+                    color: isPinEnabled
+                      ? colors.primaryGreen
+                      : colors.secondaryMutedText,
+                  },
                 ]}
               >
-                Connects in CP16
+                {isPinEnabled
+                  ? `ON (4-Digit PIN${isBioEnabled ? " + Fingerprint" : ""})`
+                  : hasSavedPin
+                    ? "OFF (Saved PIN ready • Tap to turn ON)"
+                    : "OFF • Tap to set 4-digit PIN"}
               </Text>
             </View>
-          </View>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={colors.secondaryMutedText}
+            />
+          </Pressable>
 
           <View
             style={[styles.divider, { backgroundColor: colors.borderDivider }]}
@@ -317,7 +414,6 @@ export default function MoreSettingsScreen() {
           </View>
         </View>
       </View>
-
       {/* Edit Business Profile & Currency Modal */}
       <Modal
         visible={editModalVisible}
@@ -427,12 +523,183 @@ export default function MoreSettingsScreen() {
           </View>
         </View>
       </Modal>
-
       {/* Business Switcher Modal */}
       <BusinessSwitcherModal
         visible={switcherVisible}
         onClose={() => setSwitcherVisible(false)}
       />
+      {/* CP16: App Lock Configuration Modal */}
+      <Modal
+        visible={appLockModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAppLockModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View
+            style={[styles.modalCard, { backgroundColor: colors.cardSurface }]}
+          >
+            <Text
+              style={[styles.modalTitle, { color: colors.primaryTextDark }]}
+            >
+              App Lock Security
+            </Text>
+
+            {/* 1. Simple ON/OFF Switch when a PIN is already saved */}
+            {hasSavedPin && (
+              <View style={[styles.rowBetween, { marginBottom: 16 }]}>
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <Text
+                    style={[
+                      styles.settingTitle,
+                      { color: colors.primaryTextDark, fontSize: 14 },
+                    ]}
+                  >
+                    Enable App Lock
+                  </Text>
+                  <Text
+                    style={[
+                      styles.settingDescription,
+                      { color: colors.secondaryMutedText, fontSize: 12 },
+                    ]}
+                  >
+                    Uses your saved 4-digit PIN
+                  </Text>
+                </View>
+                <Switch
+                  value={isPinEnabled}
+                  onValueChange={(v) => void handleToggleAppLockSwitch(v)}
+                  trackColor={{
+                    false: colors.borderDivider,
+                    true: colors.primaryGreen,
+                  }}
+                />
+              </View>
+            )}
+
+            {/* 2. Fingerprint Toggle (Only shown when App Lock is ON) */}
+            {isBioSupported && hasSavedPin && isPinEnabled && (
+              <View style={[styles.rowBetween, { marginBottom: 16 }]}>
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <Text
+                    style={[
+                      styles.settingTitle,
+                      { color: colors.primaryTextDark, fontSize: 14 },
+                    ]}
+                  >
+                    Unlock with Fingerprint
+                  </Text>
+                  <Text
+                    style={[
+                      styles.settingDescription,
+                      { color: colors.secondaryMutedText, fontSize: 12 },
+                    ]}
+                  >
+                    Verify fingerprint to unlock without typing PIN
+                  </Text>
+                </View>
+                <Switch
+                  value={isBioEnabled}
+                  onValueChange={(v) => void handleToggleBiometric(v)}
+                  trackColor={{
+                    false: colors.borderDivider,
+                    true: colors.primaryGreen,
+                  }}
+                />
+              </View>
+            )}
+
+            {/* 3. Button to change PIN if PIN already exists */}
+            {hasSavedPin && !showPinInputForm && (
+              <Pressable
+                onPress={() => setShowPinInputForm(true)}
+                style={[
+                  styles.changePinBtn,
+                  { borderColor: colors.primaryBlue },
+                ]}
+              >
+                <Ionicons
+                  name="key-outline"
+                  size={16}
+                  color={colors.primaryBlue}
+                />
+                <Text
+                  style={[styles.changePinText, { color: colors.primaryBlue }]}
+                >
+                  Change 4-Digit PIN
+                </Text>
+              </Pressable>
+            )}
+
+            {/* 4. PIN Input Box (Shown on first setup or when changing PIN) */}
+            {showPinInputForm && (
+              <View style={{ marginTop: 4 }}>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    { color: colors.secondaryMutedText },
+                  ]}
+                >
+                  {hasSavedPin ? "ENTER NEW 4-DIGIT PIN" : "SET 4-DIGIT PIN"}
+                </Text>
+                <TextInput
+                  value={newPin}
+                  onChangeText={(txt) =>
+                    setNewPin(txt.replace(/[^0-9]/g, "").slice(0, 4))
+                  }
+                  keyboardType="number-pad"
+                  secureTextEntry
+                  maxLength={4}
+                  style={[
+                    styles.input,
+                    {
+                      color: colors.primaryTextDark,
+                      borderColor: colors.borderDivider,
+                      letterSpacing: 8,
+                      fontSize: 18,
+                    },
+                  ]}
+                  placeholder="••••"
+                  placeholderTextColor={colors.secondaryMutedText}
+                />
+              </View>
+            )}
+
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setAppLockModalVisible(false)}
+                style={[
+                  styles.modalBtn,
+                  { borderColor: colors.borderDivider, borderWidth: 1 },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.modalBtnText,
+                    { color: colors.secondaryMutedText },
+                  ]}
+                >
+                  CLOSE
+                </Text>
+              </Pressable>
+
+              {showPinInputForm && (
+                <Pressable
+                  onPress={() => void handleSavePin()}
+                  style={[
+                    styles.modalBtn,
+                    { backgroundColor: colors.primaryBlue },
+                  ]}
+                >
+                  <Text style={[styles.modalBtnText, { color: "#FFFFFF" }]}>
+                    SAVE PIN
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -571,6 +838,20 @@ const styles = StyleSheet.create({
   },
   modalBtnText: {
     fontFamily: "Inter_700Bold",
+    fontSize: 13,
+  },
+  changePinBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderRadius: 8,
+    height: 42,
+    gap: 8,
+    marginBottom: 16,
+  },
+  changePinText: {
+    fontFamily: "Inter_600SemiBold",
     fontSize: 13,
   },
 });
