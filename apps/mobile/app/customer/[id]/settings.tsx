@@ -25,6 +25,7 @@ import {
   updateCustomer,
 } from "../../../db/customerQueries";
 import { DeleteConfirmModal } from "../../../components/DeleteConfirmModal";
+import { getStrings } from "../../../constants/translations";
 
 const customerSchema = z.object({
   name: z.string().trim().min(1, "Customer name is required."),
@@ -38,6 +39,8 @@ export default function CustomerSettingsScreen() {
   const router = useRouter();
   const themeMode = useUiStore((state) => state.themeMode);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const colors = getThemeColors(themeMode);
 
   const [dbError, setDbError] = useState<string | null>(null);
@@ -123,12 +126,12 @@ export default function CustomerSettingsScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </Pressable>
-        <Text style={styles.headerTitle}>Customer Settings</Text>
+        <Text style={styles.headerTitle}>{t.customerSettingsTitle}</Text>
       </View>
 
       <View style={styles.content}>
         <Text style={[styles.label, { color: colors.secondaryMutedText }]}>
-          Customer Name *
+          {t.customerNameRequiredLabel}
         </Text>
         <Controller
           control={control}
@@ -163,7 +166,7 @@ export default function CustomerSettingsScreen() {
             { color: colors.secondaryMutedText, marginTop: 12 },
           ]}
         >
-          Mobile Number
+          {t.mobileNumberLabel}
         </Text>
         <Controller
           control={control}
@@ -206,19 +209,18 @@ export default function CustomerSettingsScreen() {
           ]}
         >
           <Text style={styles.btnText}>
-            {isSubmitting ? "UPDATING..." : "UPDATE DETAILS"}
+            {isSubmitting ? t.updatingBtn : t.updateDetailsBtn}
           </Text>
         </Pressable>
 
         <View style={styles.dangerZone}>
           <Text style={[styles.dangerTitle, { color: colors.primaryRed }]}>
-            Danger Zone
+            {t.dangerZoneTitle}
           </Text>
           <Text
             style={[styles.dangerDesc, { color: colors.secondaryMutedText }]}
           >
-            Deleting this customer will also permanently remove all associated
-            ledger entries.
+            {t.deleteCustomerWarning}
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -231,7 +233,7 @@ export default function CustomerSettingsScreen() {
               color={colors.primaryRed}
             />
             <Text style={[styles.deleteBtnText, { color: colors.primaryRed }]}>
-              DELETE CUSTOMER
+              {t.deleteCustomerBtn}
             </Text>
           </Pressable>
         </View>
@@ -239,8 +241,8 @@ export default function CustomerSettingsScreen() {
 
       <DeleteConfirmModal
         visible={deleteModalVisible}
-        title="Delete Customer?"
-        description="Are you sure? This will delete the customer and all their ledger entries."
+        title={t.deleteCustomerConfirmTitle}
+        description={t.deleteCustomerConfirmDesc}
         onCancel={() => setDeleteModalVisible(false)}
         onConfirm={handleDelete}
       />

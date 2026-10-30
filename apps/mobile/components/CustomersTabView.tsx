@@ -22,6 +22,7 @@ import {
 } from "../db/customerQueries";
 import { CustomerRowItem } from "./CustomerRowItem";
 import { CustomerFilterModal } from "./CustomerFilterModal";
+import { getStrings } from "../constants/translations";
 
 export function CustomersTabView() {
   const router = useRouter();
@@ -37,6 +38,8 @@ export function CustomersTabView() {
     (state) => state.setCustomerSearchQuery,
   );
   const themeMode = useUiStore((state) => state.themeMode);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
 
   const colors = getThemeColors(themeMode);
 
@@ -121,7 +124,7 @@ export function CustomersTabView() {
                 { color: colors.secondaryMutedText },
               ]}
             >
-              You will give
+              {t.youWillGive}
             </Text>
             <Text
               style={[styles.summaryAmount, { color: colors.primaryGreen }]}
@@ -145,7 +148,7 @@ export function CustomersTabView() {
                 { color: colors.secondaryMutedText },
               ]}
             >
-              You will get
+              {t.youWillGet}
             </Text>
             <Text style={[styles.summaryAmount, { color: colors.primaryRed }]}>
               {formatCurrency(summary.totalYouWillGet, activeBusinessCurrency)}
@@ -169,7 +172,7 @@ export function CustomersTabView() {
             color={colors.primaryBlue}
           />
           <Text style={[styles.viewReportsText, { color: colors.primaryBlue }]}>
-            View Reports
+            {t.viewReports}
           </Text>
           <Ionicons
             name="chevron-forward"
@@ -204,7 +207,9 @@ export function CustomersTabView() {
             onChangeText={setCustomerSearchQuery}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
-            placeholder={searchFocused ? "Name, Mobile no." : "Search Customer"}
+            placeholder={
+              searchFocused ? t.searchFocusedPlaceholder : t.searchCustomer
+            }
             placeholderTextColor={colors.secondaryMutedText}
             style={[styles.searchInput, { color: colors.primaryTextDark }]}
           />
@@ -253,7 +258,7 @@ export function CustomersTabView() {
               },
             ]}
           >
-            Filters
+            {t.filters}
           </Text>
         </Pressable>
       </View>
@@ -286,8 +291,8 @@ export function CustomersTabView() {
               style={[styles.emptyTitle, { color: colors.primaryTextDark }]}
             >
               {summary.activeCustomerCount === 0
-                ? "No Customers Added Yet"
-                : "No Matching Customers Found"}
+                ? t.noCustomersYetTitle
+                : t.noMatchingCustomersTitle}
             </Text>
             <Text
               style={[
@@ -296,8 +301,8 @@ export function CustomersTabView() {
               ]}
             >
               {summary.activeCustomerCount === 0
-                ? "Tap '+ ADD CUSTOMER' below to add your first customer and start tracking credit & ledger balances."
-                : "Try changing your search text or clearing the active status filter."}
+                ? t.noCustomersYetSubtitle
+                : t.noMatchingCustomersSubtitle}
             </Text>
           </View>
         ) : (
@@ -331,9 +336,8 @@ export function CustomersTabView() {
         ]}
       >
         <Ionicons name="person-add" size={18} color="#FFFFFF" />
-        <Text style={styles.fabButtonText}>ADD CUSTOMER</Text>
+        <Text style={styles.fabButtonText}>{t.addCustomerBtn}</Text>
       </Pressable>
-
       {/* Filter & Sort Bottom Sheet Modal */}
       <CustomerFilterModal
         visible={filterModalVisible}

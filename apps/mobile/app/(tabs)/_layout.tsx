@@ -6,9 +6,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUiStore } from "../../store/uiStore";
 import { getThemeColors } from "../../constants/theme";
+import { getStrings } from "../../constants/translations";
 
 export default function TabLayout() {
   const themeMode = useUiStore((state) => state.themeMode);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const colors = getThemeColors(themeMode);
   const insets = useSafeAreaInsets();
 
@@ -39,10 +42,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: t.homeTab,
           tabBarLabel: ({ color }) => (
             <Text style={[styles.tabLabel, { color }]} numberOfLines={1}>
-              Home
+              {t.homeTab}
             </Text>
           ),
           tabBarIcon: ({ color, focused }) => (
@@ -57,10 +60,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="more"
         options={{
-          title: "More",
+          title: t.moreTab,
           tabBarLabel: ({ color }) => (
             <Text style={[styles.tabLabel, { color }]} numberOfLines={1}>
-              More
+              {t.moreTab}
             </Text>
           ),
           tabBarIcon: ({ color, focused }) => (

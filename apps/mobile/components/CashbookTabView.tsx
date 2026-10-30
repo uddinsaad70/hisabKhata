@@ -24,12 +24,15 @@ import {
 } from "../db/cashbookQueries";
 import { CashbookRowItem } from "./CashbookRowItem";
 import { UndoSnackbar } from "./UndoSnackbar";
+import { getStrings } from "../constants/translations";
 
 export function CashbookTabView() {
   const router = useRouter();
   const themeMode = useUiStore((state) => state.themeMode);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
   const currency = useUiStore((state) => state.activeBusinessCurrency);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const colors = getThemeColors(themeMode);
 
   const [summary, setSummary] = useState<CashbookDashboardSummary | null>(null);
@@ -99,7 +102,7 @@ export function CashbookTabView() {
             <Text
               style={[styles.cardTitle, { color: colors.secondaryMutedText }]}
             >
-              Total Balance
+              {t.totalBalance}
             </Text>
             <Text
               style={[
@@ -129,7 +132,7 @@ export function CashbookTabView() {
                     { color: colors.secondaryMutedText },
                   ]}
                 >
-                  Cash in Hand
+                  {t.cashInHand}
                 </Text>
                 <Text
                   style={[styles.splitValue, { color: colors.primaryTextDark }]}
@@ -144,7 +147,7 @@ export function CashbookTabView() {
                     { color: colors.secondaryMutedText },
                   ]}
                 >
-                  Online
+                  {t.online}
                 </Text>
                 <Text
                   style={[styles.splitValue, { color: colors.primaryTextDark }]}
@@ -168,7 +171,7 @@ export function CashbookTabView() {
             <Text
               style={[styles.cardTitle, { color: colors.secondaryMutedText }]}
             >
-              Today's Balance
+              {t.todaysBalance}
             </Text>
             <Text
               style={[
@@ -198,7 +201,7 @@ export function CashbookTabView() {
                     { color: colors.secondaryMutedText },
                   ]}
                 >
-                  Cash in Hand
+                  {t.cashInHand}
                 </Text>
                 <Text
                   style={[styles.splitValue, { color: colors.primaryTextDark }]}
@@ -213,7 +216,7 @@ export function CashbookTabView() {
                     { color: colors.secondaryMutedText },
                   ]}
                 >
-                  Online
+                  {t.online}
                 </Text>
                 <Text
                   style={[styles.splitValue, { color: colors.primaryTextDark }]}
@@ -237,7 +240,7 @@ export function CashbookTabView() {
           <Text
             style={[styles.reportBtnMainText, { color: colors.primaryBlue }]}
           >
-            VIEW CASHBOOK REPORT
+            {t.viewCashbookReport}
           </Text>
         </Pressable>
 
@@ -258,7 +261,7 @@ export function CashbookTabView() {
                 { color: colors.secondaryMutedText },
               ]}
             >
-              ENTRIES
+              {t.entriesHeader}
             </Text>
           </View>
           <View
@@ -273,7 +276,7 @@ export function CashbookTabView() {
                 { color: colors.secondaryMutedText },
               ]}
             >
-              OUT
+              {t.outHeader}
             </Text>
           </View>
           <View style={styles.colInHeader}>
@@ -283,7 +286,7 @@ export function CashbookTabView() {
                 { color: colors.secondaryMutedText },
               ]}
             >
-              IN
+              {t.inHeader}
             </Text>
           </View>
         </View>
@@ -326,7 +329,7 @@ export function CashbookTabView() {
                             { color: colors.secondaryMutedText },
                           ]}
                         >
-                          {dTotals?.count || 0} Entries
+                          {dTotals?.count || 0} {t.entriesCountLabel}
                         </Text>
                       </View>
                       <View
@@ -374,7 +377,7 @@ export function CashbookTabView() {
                     { color: colors.secondaryMutedText },
                   ]}
                 >
-                  No entries found.
+                  {t.noEntriesFound}
                 </Text>
               </View>
             )}
@@ -399,7 +402,7 @@ export function CashbookTabView() {
             { backgroundColor: colors.primaryRed, marginRight: 6 },
           ]}
         >
-          <Text style={styles.actionBtnText}>[-] OUT</Text>
+          <Text style={styles.actionBtnText}>{t.btnOut}</Text>
         </Pressable>
         <Pressable
           onPress={() => router.push(`/cashbook/entry-form?type=IN` as never)}
@@ -408,10 +411,9 @@ export function CashbookTabView() {
             { backgroundColor: colors.primaryGreen, marginLeft: 6 },
           ]}
         >
-          <Text style={styles.actionBtnText}>[+] IN</Text>
+          <Text style={styles.actionBtnText}>{t.btnIn}</Text>
         </Pressable>
       </View>
-
       <UndoSnackbar />
     </View>
   );

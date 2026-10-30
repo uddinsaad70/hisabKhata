@@ -27,6 +27,7 @@ import {
   getCashbookDailyReport,
   type CashbookDailyReportRow,
 } from "../../db/cashbookQueries";
+import { getStrings } from "../../constants/translations";
 
 export default function CashbookReportScreen() {
   const router = useRouter();
@@ -34,6 +35,8 @@ export default function CashbookReportScreen() {
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
   const activeBusinessName = useUiStore((state) => state.activeBusinessName);
   const currency = useUiStore((state) => state.activeBusinessCurrency);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const colors = getThemeColors(themeMode);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -143,7 +146,7 @@ export default function CashbookReportScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </Pressable>
-        <Text style={styles.headerTitle}>Cashbook Report</Text>
+        <Text style={styles.headerTitle}>{t.cashbookReportTitle}</Text>
       </View>
 
       {/* Date Range Selector Bar */}
@@ -175,7 +178,7 @@ export default function CashbookReportScreen() {
             <Text
               style={[styles.dateLabel, { color: colors.secondaryMutedText }]}
             >
-              START DATE
+              {t.startDateLabel}
             </Text>
             <Text style={[styles.dateValue, { color: colors.primaryTextDark }]}>
               {getLocalDateString(startDate)}
@@ -208,7 +211,7 @@ export default function CashbookReportScreen() {
             <Text
               style={[styles.dateLabel, { color: colors.secondaryMutedText }]}
             >
-              END DATE
+              {t.endDateLabel}
             </Text>
             <Text style={[styles.dateValue, { color: colors.primaryTextDark }]}>
               {getLocalDateString(endDate)}
@@ -258,7 +261,7 @@ export default function CashbookReportScreen() {
           <Text
             style={[styles.summaryLabel, { color: colors.secondaryMutedText }]}
           >
-            Total IN
+            {t.totalInLabel}
           </Text>
           <Text style={[styles.summaryValue, { color: colors.primaryGreen }]}>
             {formatCurrency(rangeSummary.totalIn, currency, true)}
@@ -274,7 +277,7 @@ export default function CashbookReportScreen() {
           <Text
             style={[styles.summaryLabel, { color: colors.secondaryMutedText }]}
           >
-            Total OUT
+            {t.totalOutLabel}
           </Text>
           <Text style={[styles.summaryValue, { color: colors.primaryRed }]}>
             {formatCurrency(rangeSummary.totalOut, currency, true)}
@@ -290,7 +293,7 @@ export default function CashbookReportScreen() {
           <Text
             style={[styles.summaryLabel, { color: colors.secondaryMutedText }]}
           >
-            Net Balance
+            {t.netBalanceLabel}
           </Text>
           <Text
             style={[
@@ -322,14 +325,14 @@ export default function CashbookReportScreen() {
           <Text
             style={[styles.colHeaderText, { color: colors.secondaryMutedText }]}
           >
-            DATE
+            {t.dateCol}
           </Text>
         </View>
         <View style={styles.colAmount}>
           <Text
             style={[styles.colHeaderText, { color: colors.secondaryMutedText }]}
           >
-            DAILY IN
+            {t.dailyInCol}
           </Text>
         </View>
         <View
@@ -341,14 +344,14 @@ export default function CashbookReportScreen() {
           <Text
             style={[styles.colHeaderText, { color: colors.secondaryMutedText }]}
           >
-            DAILY OUT
+            {t.dailyOutCol}
           </Text>
         </View>
         <View style={styles.colAmount}>
           <Text
             style={[styles.colHeaderText, { color: colors.secondaryMutedText }]}
           >
-            TOTAL BAL.
+            {t.totalBalCol}
           </Text>
         </View>
       </View>
@@ -380,8 +383,7 @@ export default function CashbookReportScreen() {
                     { color: colors.secondaryMutedText },
                   ]}
                 >
-                  {item.entry_count}{" "}
-                  {item.entry_count === 1 ? "Entry" : "Entries"}
+                  {item.entry_count} {t.entriesCountLabel}
                 </Text>
               </View>
 
@@ -426,7 +428,7 @@ export default function CashbookReportScreen() {
               <Text
                 style={[styles.emptyText, { color: colors.secondaryMutedText }]}
               >
-                No cashbook entries found in this date range.
+                {t.noCashbookInRange}
               </Text>
             </View>
           )}
@@ -458,7 +460,7 @@ export default function CashbookReportScreen() {
             color={colors.primaryBlue}
           />
           <Text style={[styles.outlineBtnText, { color: colors.primaryBlue }]}>
-            SAVE PDF
+            {t.savePdfBtn}
           </Text>
         </Pressable>
 
@@ -476,7 +478,7 @@ export default function CashbookReportScreen() {
           ) : (
             <>
               <Ionicons name="share-social-outline" size={20} color="#FFFFFF" />
-              <Text style={styles.primaryBtnText}>SHARE PDF</Text>
+              <Text style={styles.primaryBtnText}>{t.sharePdfBtn}</Text>
             </>
           )}
         </Pressable>
@@ -490,7 +492,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: Platform.OS === "android" ? 16 : 30,
+    paddingTop: Platform.OS === "android" ? 42 : 50,
     paddingBottom: 16,
     paddingHorizontal: 16,
   },

@@ -237,7 +237,7 @@ export async function pickAndRestoreBackupJson(
     ],
   );
 
-  // 2. Upsert Customers
+  // 2. Upsert Customers (Preserves all existing schema columns dynamically)
   for (const c of customers) {
     if (!c.id) continue;
     const customerName = String(c.name || "Customer").trim();
@@ -249,46 +249,57 @@ export async function pickAndRestoreBackupJson(
         .slice(0, 2)
         .toUpperCase() || "C";
 
+    // Build dynamic insert from the exported customer object keys so no balance column is lost
+    const record: Record<string, any> = {
+      ...c,
+      id: c.id,
+      business_id: biz.id,
+      name: customerName,
+      phone: c.phone ?? null,
+      avatar_initials: c.avatar_initials || fallbackInitials,
+      is_synced: 1,
+      is_deleted: c.is_deleted ?? 0,
+      created_at: c.created_at ?? now,
+      updated_at: now,
+    };
+
+    const keys = Object.keys(record);
+    const placeholders = keys.map(() => "?").join(", ");
+    const values = keys.map((k) => record[k]);
+
     await db.runAsync(
-      `INSERT OR REPLACE INTO customers (
-         id, business_id, name, phone, avatar_initials, is_synced, is_deleted, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-      [
-        c.id,
-        biz.id,
-        customerName,
-        c.phone ?? null,
-        c.avatar_initials || fallbackInitials,
-        1,
-        c.is_deleted ?? 0,
-        c.created_at ?? now,
-        now,
-      ],
+      `INSERT OR REPLACE INTO customers (${keys.join(", ")}) VALUES (${placeholders});`,
+      values,
     );
   }
 
   // 3. Upsert Customer Ledger Entries
   for (const ce of customerEntries) {
     if (!ce.id || !ce.customer_id) continue;
+    const entryRecord: Record<string, any> = {
+      ...ce,
+      id: ce.id,
+      business_id: biz.id,
+      customer_id: ce.customer_id,
+      type: ce.type === "GOT" ? "GOT" : "GAVE",
+      amount: Number(ce.amount) || 0,
+      details: ce.details ?? null,
+      entry_date: ce.entry_date,
+      entry_time: ce.entry_time,
+      timestamp: ce.timestamp ?? now,
+      is_synced: 1,
+      is_deleted: ce.is_deleted ?? 0,
+      created_at: ce.created_at ?? now,
+      updated_at: now,
+    };
+
+    const keys = Object.keys(entryRecord);
+    const placeholders = keys.map(() => "?").join(", ");
+    const values = keys.map((k) => entryRecord[k]);
+
     await db.runAsync(
-      `INSERT OR REPLACE INTO customer_entries (
-         id, business_id, customer_id, type, amount, details, entry_date, entry_time, timestamp, is_synced, is_deleted, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-      [
-        ce.id,
-        biz.id,
-        ce.customer_id,
-        ce.type === "GOT" ? "GOT" : "GAVE",
-        Number(ce.amount) || 0,
-        ce.details ?? null,
-        ce.entry_date,
-        ce.entry_time,
-        ce.timestamp ?? now,
-        1,
-        ce.is_deleted ?? 0,
-        ce.created_at ?? now,
-        now,
-      ],
+      `INSERT OR REPLACE INTO customer_entries (${keys.join(", ")}) VALUES (${placeholders});`,
+      values,
     );
   }
 

@@ -35,6 +35,7 @@ import { getDbAdapter } from "../../db/client";
 import { updateBusinessProfile } from "../../db/businessQueries";
 import { type CurrencyCode } from "../../utils/formatCurrency";
 import { BusinessSwitcherModal } from "../../components/BusinessSwitcherModal";
+import { getStrings } from "../../constants/translations";
 
 export default function MoreSettingsScreen() {
   const themeMode = useUiStore((state) => state.themeMode);
@@ -50,6 +51,7 @@ export default function MoreSettingsScreen() {
 
   const colors = getThemeColors(themeMode);
   const isDark = themeMode === "dark";
+  const t = getStrings(language);
 
   // Modal states for CP15 Business Profile & Switcher
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -236,7 +238,7 @@ export default function MoreSettingsScreen() {
         style={[styles.headerSafeArea, { backgroundColor: colors.primaryBlue }]}
       >
         <View style={styles.headerBar}>
-          <Text style={styles.headerTitle}>More & Settings</Text>
+          <Text style={styles.headerTitle}>{t.moreAndSettings}</Text>
           <Text style={styles.headerSubtitle}>{activeBusinessName}</Text>
         </View>
       </SafeAreaView>
@@ -266,7 +268,7 @@ export default function MoreSettingsScreen() {
                     { color: colors.primaryTextDark },
                   ]}
                 >
-                  Dark Theme
+                  {t.darkTheme}
                 </Text>
                 <Text
                   style={[
@@ -274,7 +276,7 @@ export default function MoreSettingsScreen() {
                     { color: colors.secondaryMutedText },
                   ]}
                 >
-                  Switch between light and dark display mode
+                  {t.darkThemeDesc}
                 </Text>
               </View>
             </View>
@@ -289,7 +291,7 @@ export default function MoreSettingsScreen() {
           </View>
         </View>
 
-        {/* Upcoming Settings Preview Card */}
+        {/* Settings Card */}
         <View
           style={[
             styles.card,
@@ -314,7 +316,7 @@ export default function MoreSettingsScreen() {
               <Text
                 style={[styles.settingTitle, { color: colors.primaryTextDark }]}
               >
-                Business Profile & Currency
+                {t.businessProfileTitle}
               </Text>
               <Text
                 style={[
@@ -322,8 +324,7 @@ export default function MoreSettingsScreen() {
                   { color: colors.secondaryMutedText },
                 ]}
               >
-                {activeBusinessName} • Currency: {activeBusinessCurrency} (
-                {activeBusinessCurrency === "BDT" ? "৳" : "₹"})
+                {`${activeBusinessName} • ${t.currencyWord}: ${activeBusinessCurrency} (${activeBusinessCurrency === "BDT" ? "৳" : "₹"})`}
               </Text>
             </View>
             <Ionicons
@@ -352,7 +353,7 @@ export default function MoreSettingsScreen() {
               <Text
                 style={[styles.settingTitle, { color: colors.primaryTextDark }]}
               >
-                Switch or Add Business
+                {t.switchOrAddBusinessTitle}
               </Text>
               <Text
                 style={[
@@ -360,7 +361,7 @@ export default function MoreSettingsScreen() {
                   { color: colors.secondaryMutedText },
                 ]}
               >
-                Manage multiple business ledgers
+                {t.switchOrAddBusinessDesc}
               </Text>
             </View>
             <Ionicons
@@ -389,7 +390,7 @@ export default function MoreSettingsScreen() {
               <Text
                 style={[styles.settingTitle, { color: colors.primaryTextDark }]}
               >
-                Language (বাংলা / English)
+                {t.languageTitle}
               </Text>
               <Text
                 style={[
@@ -397,8 +398,7 @@ export default function MoreSettingsScreen() {
                   { color: colors.secondaryMutedText },
                 ]}
               >
-                Active: {language === "en" ? "English" : "বাংলা (Bengali)"} (Tap
-                to switch)
+                {language === "en" ? t.languageDescEn : t.languageDescBn}
               </Text>
             </View>
             <View
@@ -434,7 +434,7 @@ export default function MoreSettingsScreen() {
               <Text
                 style={[styles.settingTitle, { color: colors.primaryTextDark }]}
               >
-                App Lock (PIN & Biometric)
+                {t.appLockTitle}
               </Text>
               <Text
                 style={[
@@ -447,10 +447,12 @@ export default function MoreSettingsScreen() {
                 ]}
               >
                 {isPinEnabled
-                  ? `ON (4-Digit PIN${isBioEnabled ? " + Fingerprint" : ""})`
+                  ? isBioEnabled
+                    ? t.appLockOnWithBio
+                    : t.appLockOnPinOnly
                   : hasSavedPin
-                    ? "OFF (Saved PIN ready • Tap to turn ON)"
-                    : "OFF • Tap to set 4-digit PIN"}
+                    ? t.appLockOffSavedReady
+                    : t.appLockOffSetPin}
               </Text>
             </View>
             <Ionicons
@@ -482,7 +484,7 @@ export default function MoreSettingsScreen() {
               <Text
                 style={[styles.settingTitle, { color: colors.primaryTextDark }]}
               >
-                Local Backup & Restore
+                {t.backupRestoreTitle}
               </Text>
               <Text
                 style={[
@@ -496,8 +498,8 @@ export default function MoreSettingsScreen() {
                 ]}
               >
                 {backupStats.unsyncedCount === 0
-                  ? `All backed up (${backupStats.totalCustomers} Customers • ${backupStats.totalCustomerEntries + backupStats.totalCashbookEntries} Entries)`
-                  : `${backupStats.unsyncedCount} unsynced changes • Tap to backup`}
+                  ? `${t.allBackedUpPrefix} (${backupStats.totalCustomers} ${t.customersWord} • ${backupStats.totalCustomerEntries + backupStats.totalCashbookEntries} ${t.entriesWord})`
+                  : `${backupStats.unsyncedCount} ${t.unsyncedChangesSuffix}`}
               </Text>
             </View>
             <Ionicons
@@ -522,13 +524,13 @@ export default function MoreSettingsScreen() {
             <Text
               style={[styles.modalTitle, { color: colors.primaryTextDark }]}
             >
-              Edit Business Profile
+              {t.editBusinessModalTitle}
             </Text>
 
             <Text
               style={[styles.inputLabel, { color: colors.secondaryMutedText }]}
             >
-              BUSINESS NAME
+              {t.businessNameLabel}
             </Text>
             <TextInput
               value={editName}
@@ -540,14 +542,14 @@ export default function MoreSettingsScreen() {
                   borderColor: colors.borderDivider,
                 },
               ]}
-              placeholder="Enter business name"
+              placeholder={t.enterBusinessNamePlaceholder}
               placeholderTextColor={colors.secondaryMutedText}
             />
 
             <Text
               style={[styles.inputLabel, { color: colors.secondaryMutedText }]}
             >
-              CURRENCY
+              {t.currencyLabel}
             </Text>
             <View style={styles.currencyRow}>
               {(["BDT", "INR"] as const).map((curr) => (
@@ -599,7 +601,7 @@ export default function MoreSettingsScreen() {
                     { color: colors.secondaryMutedText },
                   ]}
                 >
-                  CANCEL
+                  {t.cancelBtn}
                 </Text>
               </Pressable>
               <Pressable
@@ -610,7 +612,7 @@ export default function MoreSettingsScreen() {
                 ]}
               >
                 <Text style={[styles.modalBtnText, { color: "#FFFFFF" }]}>
-                  SAVE
+                  {t.saveBtn}
                 </Text>
               </Pressable>
             </View>
@@ -636,7 +638,7 @@ export default function MoreSettingsScreen() {
             <Text
               style={[styles.modalTitle, { color: colors.primaryTextDark }]}
             >
-              App Lock Security
+              {t.appLockModalTitle}
             </Text>
 
             {/* 1. Simple ON/OFF Switch when a PIN is already saved */}
@@ -649,7 +651,7 @@ export default function MoreSettingsScreen() {
                       { color: colors.primaryTextDark, fontSize: 14 },
                     ]}
                   >
-                    Enable App Lock
+                    {t.enableAppLockTitle}
                   </Text>
                   <Text
                     style={[
@@ -657,7 +659,7 @@ export default function MoreSettingsScreen() {
                       { color: colors.secondaryMutedText, fontSize: 12 },
                     ]}
                   >
-                    Uses your saved 4-digit PIN
+                    {t.enableAppLockDesc}
                   </Text>
                 </View>
                 <Switch
@@ -681,7 +683,7 @@ export default function MoreSettingsScreen() {
                       { color: colors.primaryTextDark, fontSize: 14 },
                     ]}
                   >
-                    Unlock with Fingerprint
+                    {t.unlockWithFingerprintTitle}
                   </Text>
                   <Text
                     style={[
@@ -689,7 +691,7 @@ export default function MoreSettingsScreen() {
                       { color: colors.secondaryMutedText, fontSize: 12 },
                     ]}
                   >
-                    Verify fingerprint to unlock without typing PIN
+                    {t.unlockWithFingerprintDesc}
                   </Text>
                 </View>
                 <Switch
@@ -720,7 +722,7 @@ export default function MoreSettingsScreen() {
                 <Text
                   style={[styles.changePinText, { color: colors.primaryBlue }]}
                 >
-                  Change 4-Digit PIN
+                  {t.changePinBtn}
                 </Text>
               </Pressable>
             )}
@@ -734,7 +736,7 @@ export default function MoreSettingsScreen() {
                     { color: colors.secondaryMutedText },
                   ]}
                 >
-                  {hasSavedPin ? "ENTER NEW 4-DIGIT PIN" : "SET 4-DIGIT PIN"}
+                  {hasSavedPin ? t.enterNewPinLabel : t.setPinLabel}
                 </Text>
                 <TextInput
                   value={newPin}
@@ -773,7 +775,7 @@ export default function MoreSettingsScreen() {
                     { color: colors.secondaryMutedText },
                   ]}
                 >
-                  CLOSE
+                  {t.closeBtn}
                 </Text>
               </Pressable>
 
@@ -786,7 +788,7 @@ export default function MoreSettingsScreen() {
                   ]}
                 >
                   <Text style={[styles.modalBtnText, { color: "#FFFFFF" }]}>
-                    SAVE PIN
+                    {t.savePinBtn}
                   </Text>
                 </Pressable>
               )}
@@ -809,7 +811,7 @@ export default function MoreSettingsScreen() {
             <Text
               style={[styles.modalTitle, { color: colors.primaryTextDark }]}
             >
-              Local Backup & Restore
+              {t.backupRestoreTitle}
             </Text>
 
             <View
@@ -830,7 +832,7 @@ export default function MoreSettingsScreen() {
                 <Text
                   style={[styles.statLbl, { color: colors.secondaryMutedText }]}
                 >
-                  Customers
+                  {t.customersWord}
                 </Text>
               </View>
               <View style={styles.statCol}>
@@ -842,7 +844,7 @@ export default function MoreSettingsScreen() {
                 <Text
                   style={[styles.statLbl, { color: colors.secondaryMutedText }]}
                 >
-                  Ledger Entries
+                  {t.ledgerEntriesWord}
                 </Text>
               </View>
               <View style={styles.statCol}>
@@ -854,7 +856,7 @@ export default function MoreSettingsScreen() {
                 <Text
                   style={[styles.statLbl, { color: colors.secondaryMutedText }]}
                 >
-                  Cashbook
+                  {t.cashbookWord}
                 </Text>
               </View>
             </View>
@@ -873,7 +875,7 @@ export default function MoreSettingsScreen() {
                 <>
                   <Ionicons name="download-outline" size={18} color="#FFFFFF" />
                   <Text style={styles.backupActionText}>
-                    EXPORT BACKUP FILE (.JSON)
+                    {t.exportBackupBtn}
                   </Text>
                 </>
               )}
@@ -898,7 +900,7 @@ export default function MoreSettingsScreen() {
                   { color: colors.primaryBlue },
                 ]}
               >
-                RESTORE FROM BACKUP FILE
+                {t.restoreBackupBtn}
               </Text>
             </Pressable>
 
@@ -916,7 +918,7 @@ export default function MoreSettingsScreen() {
                     { color: colors.secondaryMutedText },
                   ]}
                 >
-                  CLOSE
+                  {t.closeBtn}
                 </Text>
               </Pressable>
             </View>

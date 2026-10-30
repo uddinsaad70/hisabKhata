@@ -28,6 +28,7 @@ import {
   generateAndShareCustomerPdf,
   printOrSaveCustomerPdf,
 } from "../../utils/pdfGenerator";
+import { getStrings } from "../../constants/translations";
 
 export default function CustomerReportScreen() {
   const { customerId } = useLocalSearchParams<{ customerId?: string }>();
@@ -37,6 +38,8 @@ export default function CustomerReportScreen() {
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
   const activeBusinessName = useUiStore((state) => state.activeBusinessName);
   const currency = useUiStore((state) => state.activeBusinessCurrency);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const colors = getThemeColors(themeMode);
 
   // Default date range: 1st day of the current month to Today
@@ -100,8 +103,8 @@ export default function CustomerReportScreen() {
   );
 
   const reportTitle = customerId
-    ? `${customerName ?? "Customer"} - Statement`
-    : "All Customers Report";
+    ? `${customerName ?? t.customerSingular} - ${t.statementSuffix}`
+    : t.allCustomersReportTitle;
 
   const handleSharePdf = async () => {
     if (isExporting) return;
@@ -199,7 +202,7 @@ export default function CustomerReportScreen() {
             <Text
               style={[styles.dateLabel, { color: colors.secondaryMutedText }]}
             >
-              START DATE
+              {t.startDateLabel}
             </Text>
             <Text style={[styles.dateValue, { color: colors.primaryTextDark }]}>
               {getLocalDateString(startDate)}
@@ -232,7 +235,7 @@ export default function CustomerReportScreen() {
             <Text
               style={[styles.dateLabel, { color: colors.secondaryMutedText }]}
             >
-              END DATE
+              {t.endDateLabel}
             </Text>
             <Text style={[styles.dateValue, { color: colors.primaryTextDark }]}>
               {getLocalDateString(endDate)}
@@ -282,7 +285,7 @@ export default function CustomerReportScreen() {
           <Text
             style={[styles.summaryLabel, { color: colors.secondaryMutedText }]}
           >
-            You Gave
+            {t.youGaveLabel}
           </Text>
           <Text style={[styles.summaryValue, { color: colors.primaryRed }]}>
             {formatCurrency(summary.totalGave, currency, true)}
@@ -298,7 +301,7 @@ export default function CustomerReportScreen() {
           <Text
             style={[styles.summaryLabel, { color: colors.secondaryMutedText }]}
           >
-            You Got
+            {t.youGotLabel}
           </Text>
           <Text style={[styles.summaryValue, { color: colors.primaryGreen }]}>
             {formatCurrency(summary.totalGot, currency, true)}
@@ -314,7 +317,7 @@ export default function CustomerReportScreen() {
           <Text
             style={[styles.summaryLabel, { color: colors.secondaryMutedText }]}
           >
-            Net Balance
+            {t.netBalanceLabel}
           </Text>
           <Text
             style={[
@@ -346,7 +349,7 @@ export default function CustomerReportScreen() {
           <Text
             style={[styles.colHeaderText, { color: colors.secondaryMutedText }]}
           >
-            ENTRIES ({rows.length})
+            {t.entriesHeader} ({rows.length})
           </Text>
         </View>
         <View
@@ -358,14 +361,14 @@ export default function CustomerReportScreen() {
           <Text
             style={[styles.colHeaderText, { color: colors.secondaryMutedText }]}
           >
-            YOU GAVE
+            {t.youGaveCol}
           </Text>
         </View>
         <View style={styles.colAmount}>
           <Text
             style={[styles.colHeaderText, { color: colors.secondaryMutedText }]}
           >
-            YOU GOT
+            {t.youGotCol}
           </Text>
         </View>
       </View>
@@ -446,7 +449,7 @@ export default function CustomerReportScreen() {
               <Text
                 style={[styles.emptyText, { color: colors.secondaryMutedText }]}
               >
-                No transactions found in this date range.
+                {t.noTransactionsInRange}
               </Text>
             </View>
           )}
@@ -478,7 +481,7 @@ export default function CustomerReportScreen() {
             color={colors.primaryBlue}
           />
           <Text style={[styles.outlineBtnText, { color: colors.primaryBlue }]}>
-            SAVE PDF
+            {t.savePdfBtn}
           </Text>
         </Pressable>
 
@@ -496,7 +499,7 @@ export default function CustomerReportScreen() {
           ) : (
             <>
               <Ionicons name="share-social-outline" size={20} color="#FFFFFF" />
-              <Text style={styles.primaryBtnText}>SHARE PDF</Text>
+              <Text style={styles.primaryBtnText}>{t.sharePdfBtn}</Text>
             </>
           )}
         </Pressable>
@@ -510,7 +513,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: Platform.OS === "android" ? 16 : 30,
+    paddingTop: Platform.OS === "android" ? 42 : 50,
     paddingBottom: 16,
     paddingHorizontal: 16,
   },

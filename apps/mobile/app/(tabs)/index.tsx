@@ -19,6 +19,7 @@ import { BusinessSwitcherModal } from "../../components/BusinessSwitcherModal";
 import { getAllBusinesses } from "../../db/businessQueries";
 import { CustomersTabView } from "../../components/CustomersTabView";
 import { CashbookTabView } from "../../components/CashbookTabView";
+import { getStrings } from "../../constants/translations";
 
 export default function HomeScreen() {
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
@@ -30,6 +31,8 @@ export default function HomeScreen() {
   const activeHomeTab = useUiStore((state) => state.activeHomeTab);
   const setActiveHomeTab = useUiStore((state) => state.setActiveHomeTab);
   const themeMode = useUiStore((state) => state.themeMode);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
 
   const colors = getThemeColors(themeMode);
 
@@ -129,7 +132,7 @@ export default function HomeScreen() {
                 activeHomeTab === "customers" && styles.headerTabTextActive,
               ]}
             >
-              CUSTOMERS
+              {t.customersHeaderTab}
             </Text>
           </Pressable>
 
@@ -151,7 +154,7 @@ export default function HomeScreen() {
                 activeHomeTab === "cashbook" && styles.headerTabTextActive,
               ]}
             >
-              CASHBOOK
+              {t.cashbookHeaderTab}
             </Text>
           </Pressable>
         </View>
@@ -159,40 +162,6 @@ export default function HomeScreen() {
 
       {/* Main Content Area */}
       <View style={styles.contentContainer}>
-        {dbHealth && (
-          <View
-            style={[
-              styles.dbStatusBadge,
-              {
-                backgroundColor: dbHealth.isReady
-                  ? colors.lightGreenBadgeTint
-                  : colors.lightPinkColumnTint,
-                borderColor: dbHealth.isReady
-                  ? colors.primaryGreen
-                  : colors.primaryRed,
-              },
-            ]}
-          >
-            <Ionicons
-              name={dbHealth.isReady ? "checkmark-circle" : "alert-circle"}
-              size={16}
-              color={dbHealth.isReady ? colors.primaryGreen : colors.primaryRed}
-            />
-            <Text
-              style={[
-                styles.dbStatusText,
-                {
-                  color: dbHealth.isReady
-                    ? colors.primaryGreen
-                    : colors.primaryRed,
-                },
-              ]}
-            >
-              {`SQLite v${dbHealth.userVersion} Ready • ${dbHealth.tableCount} Tables • ${dbHealth.indexCount} Indexes Active`}
-            </Text>
-          </View>
-        )}
-
         {activeHomeTab === "customers" ? (
           <CustomersTabView />
         ) : (

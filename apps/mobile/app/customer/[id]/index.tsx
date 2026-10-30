@@ -24,6 +24,7 @@ import {
   type CustomerRow,
   type CustomerLedgerEntryRow,
 } from "../../../db/customerQueries";
+import { getStrings } from "../../../constants/translations";
 
 export default function CustomerLedgerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,6 +34,8 @@ export default function CustomerLedgerScreen() {
   const activeBusinessCurrency = useUiStore(
     (state) => state.activeBusinessCurrency,
   );
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const colors = getThemeColors(themeMode);
 
   const [customer, setCustomer] = useState<CustomerRow | null>(null);
@@ -120,7 +123,7 @@ export default function CustomerLedgerScreen() {
                   router.push(`/customer/${customer.id}/settings` as never)
                 }
               >
-                <Text style={styles.settingsLink}>View settings</Text>
+                <Text style={styles.settingsLink}>{t.viewSettings}</Text>
               </Pressable>
             </View>
           </View>
@@ -149,7 +152,7 @@ export default function CustomerLedgerScreen() {
                     { color: colors.primaryTextDark, marginLeft: 6 },
                   ]}
                 >
-                  Settled Up
+                  {t.settledUp}
                 </Text>
               </View>
             ) : (
@@ -159,7 +162,7 @@ export default function CustomerLedgerScreen() {
                   { color: colors.secondaryMutedText },
                 ]}
               >
-                {isYouWillGive ? "You will give" : "You will get"}
+                {isYouWillGive ? t.youWillGive : t.youWillGet}
               </Text>
             )}
             <Text style={[styles.balanceAmount, { color: balanceColor }]}>
@@ -188,7 +191,7 @@ export default function CustomerLedgerScreen() {
               color={colors.primaryBlue}
             />
             <Text style={[styles.reportBtnText, { color: colors.primaryBlue }]}>
-              Report
+              {t.reportBtn}
             </Text>
           </Pressable>
         </View>
@@ -208,7 +211,7 @@ export default function CustomerLedgerScreen() {
           <Text
             style={[styles.colHeaderText, { color: colors.secondaryMutedText }]}
           >
-            ENTRIES
+            {t.entriesHeader}
           </Text>
         </View>
         <View
@@ -220,14 +223,14 @@ export default function CustomerLedgerScreen() {
           <Text
             style={[styles.colHeaderText, { color: colors.secondaryMutedText }]}
           >
-            YOU GAVE
+            {t.youGaveCol}
           </Text>
         </View>
         <View style={styles.colGot}>
           <Text
             style={[styles.colHeaderText, { color: colors.secondaryMutedText }]}
           >
-            YOU GOT
+            {t.youGotCol}
           </Text>
         </View>
       </View>
@@ -311,7 +314,7 @@ export default function CustomerLedgerScreen() {
                           },
                         ]}
                       >
-                        Bal.{" "}
+                        {t.balPrefix}{" "}
                         {formatCurrency(
                           item.running_balance,
                           activeBusinessCurrency,
@@ -399,7 +402,7 @@ export default function CustomerLedgerScreen() {
           ]}
         >
           <Text style={styles.actionBtnText}>
-            YOU GAVE {activeBusinessCurrency === "BDT" ? "৳" : "₹"}
+            {t.youGaveCol} {activeBusinessCurrency === "BDT" ? "৳" : "₹"}
           </Text>
         </Pressable>
         <Pressable
@@ -412,7 +415,7 @@ export default function CustomerLedgerScreen() {
           ]}
         >
           <Text style={styles.actionBtnText}>
-            YOU GOT {activeBusinessCurrency === "BDT" ? "৳" : "₹"}
+            {t.youGotCol} {activeBusinessCurrency === "BDT" ? "৳" : "₹"}
           </Text>
         </Pressable>
       </View>

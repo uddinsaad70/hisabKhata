@@ -1,0 +1,274 @@
+// apps/mobile/constants/translations.ts
+import { type AppLanguage } from "../store/uiStore";
+
+export const TRANSLATIONS = {
+  en: {
+    // 1. Bottom Tab & Top Header Navigation
+    homeTab: "Home",
+    moreTab: "More",
+    customersHeaderTab: "CUSTOMERS",
+    cashbookHeaderTab: "CASHBOOK",
+
+    // 2. Customers Home Tab
+    youWillGive: "You will give",
+    youWillGet: "You will get",
+    settledUp: "Settled Up",
+    viewReports: "View Reports",
+    searchCustomer: "Search Customer",
+    searchFocusedPlaceholder: "Name, Mobile no.",
+    filters: "Filters",
+    noCustomersYetTitle: "No Customers Added Yet",
+    noMatchingCustomersTitle: "No Matching Customers Found",
+    noCustomersYetSubtitle:
+      "Tap '+ ADD CUSTOMER' below to add your first customer and start tracking credit & ledger balances.",
+    noMatchingCustomersSubtitle:
+      "Try changing your search text or clearing the active status filter.",
+    addCustomerBtn: "ADD CUSTOMER",
+
+    // 3. Cashbook Home Tab
+    totalBalance: "Total Balance",
+    todaysBalance: "Today's Balance",
+    cashInHand: "Cash in Hand",
+    online: "Online",
+    viewCashbookReport: "VIEW CASHBOOK REPORT",
+    entriesHeader: "ENTRIES",
+    outHeader: "OUT",
+    inHeader: "IN",
+    entriesCountLabel: "Entries",
+    noEntriesFound: "No entries found.",
+    btnOut: "[-] OUT",
+    btnIn: "[+] IN",
+
+    // 4. More & Settings Screen
+    moreAndSettings: "More & Settings",
+    darkTheme: "Dark Theme",
+    darkThemeDesc: "Switch between light and dark display mode",
+    businessProfileTitle: "Business Profile & Currency",
+    currencyWord: "Currency",
+    switchOrAddBusinessTitle: "Switch or Add Business",
+    switchOrAddBusinessDesc: "Manage multiple business ledgers",
+    languageTitle: "Language (বাংলা / English)",
+    languageDescEn: "Active: English (Tap to switch to বাংলা)",
+    languageDescBn: "Active: বাংলা (Tap to switch to English)",
+    appLockTitle: "App Lock (PIN & Biometric)",
+    appLockOnPinOnly: "ON (4-Digit PIN)",
+    appLockOnWithBio: "ON (4-Digit PIN + Fingerprint)",
+    appLockOffSavedReady: "OFF (Saved PIN ready • Tap to turn ON)",
+    appLockOffSetPin: "OFF • Tap to set 4-digit PIN",
+    backupRestoreTitle: "Local Backup & Restore",
+    allBackedUpPrefix: "All backed up",
+    unsyncedChangesSuffix: "unsynced changes • Tap to backup",
+    customersWord: "Customers",
+    customerSingular: "Customer",
+    entriesWord: "Entries",
+    ledgerEntriesWord: "Ledger Entries",
+    cashbookWord: "Cashbook",
+
+    // 5. Business Switcher & More Modals
+    selectBusinessTitle: "Select Business",
+    addNewBusinessTitle: "Add New Business",
+    businessShopNameLabel: "Business / Shop Name *",
+    businessShopPlaceholder: "e.g. Wholesale Godown / Store 2",
+    backBtn: "BACK",
+    createBusinessBtn: "CREATE BUSINESS",
+    addNewBusinessBtn: "+ ADD NEW BUSINESS",
+    editBusinessModalTitle: "Edit Business Profile",
+    businessNameLabel: "BUSINESS NAME",
+    enterBusinessNamePlaceholder: "Enter business name",
+    currencyLabel: "CURRENCY",
+    cancelBtn: "CANCEL",
+    saveBtn: "SAVE",
+    closeBtn: "CLOSE",
+    appLockModalTitle: "App Lock Security",
+    enableAppLockTitle: "Enable App Lock",
+    enableAppLockDesc: "Uses your saved 4-digit PIN",
+    unlockWithFingerprintTitle: "Unlock with Fingerprint",
+    unlockWithFingerprintDesc:
+      "Verify fingerprint to unlock without typing PIN",
+    changePinBtn: "Change 4-Digit PIN",
+    enterNewPinLabel: "ENTER NEW 4-DIGIT PIN",
+    setPinLabel: "SET 4-DIGIT PIN",
+    savePinBtn: "SAVE PIN",
+    exportBackupBtn: "EXPORT BACKUP FILE (.JSON)",
+    restoreBackupBtn: "RESTORE FROM BACKUP FILE",
+
+    // 6. Customer Ledger Detail Screen
+    viewSettings: "View settings",
+    reportBtn: "Report",
+    youGaveCol: "YOU GAVE",
+    youGotCol: "YOU GOT",
+    balPrefix: "Bal.",
+
+    // 7. Customer Settings Screen
+    customerSettingsTitle: "Customer Settings",
+    customerNameRequiredLabel: "Customer Name *",
+    mobileNumberLabel: "Mobile Number",
+    updatingBtn: "UPDATING...",
+    updateDetailsBtn: "UPDATE DETAILS",
+    dangerZoneTitle: "Danger Zone",
+    deleteCustomerWarning:
+      "Deleting this customer will also permanently remove all associated ledger entries.",
+    deleteCustomerBtn: "DELETE CUSTOMER",
+    deleteCustomerConfirmTitle: "Delete Customer?",
+    deleteCustomerConfirmDesc:
+      "Are you sure? This will delete the customer and all their ledger entries.",
+
+    // 8. Reports (Customer & Cashbook)
+    statementSuffix: "Statement",
+    allCustomersReportTitle: "All Customers Report",
+    cashbookReportTitle: "Cashbook Report",
+    startDateLabel: "START DATE",
+    endDateLabel: "END DATE",
+    youGaveLabel: "You Gave",
+    youGotLabel: "You Got",
+    netBalanceLabel: "Net Balance",
+    totalInLabel: "Total IN",
+    totalOutLabel: "Total OUT",
+    dateCol: "DATE",
+    dailyInCol: "DAILY IN",
+    dailyOutCol: "DAILY OUT",
+    totalBalCol: "TOTAL BAL.",
+    noTransactionsInRange: "No transactions found in this date range.",
+    noCashbookInRange: "No cashbook entries found in this date range.",
+    savePdfBtn: "SAVE PDF",
+    sharePdfBtn: "SHARE PDF",
+  },
+  bn: {
+    // 1. Bottom Tab & Top Header Navigation
+    homeTab: "হোম",
+    moreTab: "আরও",
+    customersHeaderTab: "কাস্টমার",
+    cashbookHeaderTab: "ক্যাশবুক",
+
+    // 2. Customers Home Tab
+    youWillGive: "আপনি দেবেন",
+    youWillGet: "আপনি পাবেন",
+    settledUp: "হিসাব সমান",
+    viewReports: "রিপোর্ট দেখুন",
+    searchCustomer: "কাস্টমার খুঁজুন",
+    searchFocusedPlaceholder: "নাম বা মোবাইল নম্বর",
+    filters: "ফিল্টার",
+    noCustomersYetTitle: "কোনো কাস্টমার যোগ করা হয়নি",
+    noMatchingCustomersTitle: "কোনো কাস্টমার পাওয়া যায়নি",
+    noCustomersYetSubtitle:
+      "প্রথম কাস্টমার যোগ করতে নিচের '+ নতুন কাস্টমার' বাটনে ট্যাপ করুন এবং বাকি ও লেনদেনের হিসাব রাখা শুরু করুন।",
+    noMatchingCustomersSubtitle:
+      "সার্চের লেখা পরিবর্তন করুন অথবা ফিল্টার রিসেট করে আবার চেষ্টা করুন।",
+    addCustomerBtn: "নতুন কাস্টমার",
+
+    // 3. Cashbook Home Tab
+    totalBalance: "মোট ব্যালেন্স",
+    todaysBalance: "আজকের ব্যালেন্স",
+    cashInHand: "হাতে নগদ",
+    online: "অনলাইন",
+    viewCashbookReport: "ক্যাশবুক রিপোর্ট দেখুন",
+    entriesHeader: "এন্ট্রি সমূহ",
+    outHeader: "খরচ (OUT)",
+    inHeader: "জমা (IN)",
+    entriesCountLabel: "টি এন্ট্রি",
+    noEntriesFound: "কোনো লেনদেন পাওয়া যায়নি।",
+    btnOut: "[-] খরচ (OUT)",
+    btnIn: "[+] জমা (IN)",
+
+    // 4. More & Settings Screen
+    moreAndSettings: "সেটিংস ও অন্যান্য",
+    darkTheme: "ডার্ক থিম",
+    darkThemeDesc: "লাইট এবং ডার্ক ডিসপ্লে মোড পরিবর্তন করুন",
+    businessProfileTitle: "ব্যবসার প্রোফাইল ও কারেন্সি",
+    currencyWord: "কারেন্সি",
+    switchOrAddBusinessTitle: "ব্যবসা পরিবর্তন বা নতুন যোগ করুন",
+    switchOrAddBusinessDesc: "একাধিক ব্যবসার হিসাব পরিচালনা করুন",
+    languageTitle: "ভাষা (বাংলা / English)",
+    languageDescEn: "সক্রিয়: English (বাংলা করতে ট্যাপ করুন)",
+    languageDescBn: "সক্রিয়: বাংলা (English করতে ট্যাপ করুন)",
+    appLockTitle: "অ্যাপ লক (পিন ও ফিঙ্গারপ্রিন্ট)",
+    appLockOnPinOnly: "চালু আছে (৪-ডিজিট পিন)",
+    appLockOnWithBio: "চালু আছে (৪-ডিজিট পিন + ফিঙ্গারপ্রিন্ট)",
+    appLockOffSavedReady:
+      "বন্ধ আছে (সেভ করা পিন প্রস্তুত • চালু করতে ট্যাপ করুন)",
+    appLockOffSetPin: "বন্ধ আছে • ৪-ডিজিট পিন সেট করতে ট্যাপ করুন",
+    backupRestoreTitle: "লোকাল ব্যাকআপ ও রিস্টোর",
+    allBackedUpPrefix: "সব ব্যাকআপ করা আছে",
+    unsyncedChangesSuffix: "টি নতুন পরিবর্তন • ব্যাকআপ করতে ট্যাপ করুন",
+    customersWord: "কাস্টমার",
+    customerSingular: "কাস্টমার",
+    entriesWord: "এন্ট্রি",
+    ledgerEntriesWord: "লেজার এন্ট্রি",
+    cashbookWord: "ক্যাশবুক",
+
+    // 5. Business Switcher & More Modals
+    selectBusinessTitle: "ব্যবসা নির্বাচন করুন",
+    addNewBusinessTitle: "নতুন ব্যবসা যোগ করুন",
+    businessShopNameLabel: "ব্যবসা / দোকানের নাম *",
+    businessShopPlaceholder: "যেমন: পাইকারি গোডাউন / স্টোর ২",
+    backBtn: "পেছনে",
+    createBusinessBtn: "ব্যবসা তৈরি করুন",
+    addNewBusinessBtn: "+ নতুন ব্যবসা যোগ করুন",
+    editBusinessModalTitle: "ব্যবসার প্রোফাইল এডিট করুন",
+    businessNameLabel: "ব্যবসার নাম",
+    enterBusinessNamePlaceholder: "ব্যবসার নাম লিখুন",
+    currencyLabel: "কারেন্সি (মুদ্রা)",
+    cancelBtn: "বাতিল",
+    saveBtn: "সেভ করুন",
+    closeBtn: "বন্ধ করুন",
+    appLockModalTitle: "অ্যাপ লক সিকিউরিটি",
+    enableAppLockTitle: "অ্যাপ লক চালু করুন",
+    enableAppLockDesc: "আপনার সেভ করা ৪-ডিজিট পিন ব্যবহার করবে",
+    unlockWithFingerprintTitle: "ফিঙ্গারপ্রিন্ট দিয়ে আনলক করুন",
+    unlockWithFingerprintDesc: "পিন টাইপ না করে ফিঙ্গারপ্রিন্ট দিয়ে আনলক করুন",
+    changePinBtn: "৪-ডিজিট পিন পরিবর্তন করুন",
+    enterNewPinLabel: "নতুন ৪-ডিজিট পিন দিন",
+    setPinLabel: "৪-ডিজিট পিন সেট করুন",
+    savePinBtn: "পিন সেভ করুন",
+    exportBackupBtn: "ব্যাকআপ ফাইল এক্সপোর্ট করুন (.JSON)",
+    restoreBackupBtn: "ব্যাকআপ ফাইল থেকে রিস্টোর করুন",
+
+    // 6. Customer Ledger Detail Screen
+    viewSettings: "সেটিংস দেখুন",
+    reportBtn: "রিপোর্ট",
+    youGaveCol: "আপনি দিয়েছেন",
+    youGotCol: "আপনি পেয়েছেন",
+    balPrefix: "ব্যালেন্স",
+
+    // 7. Customer Settings Screen
+    customerSettingsTitle: "কাস্টমার সেটিংস",
+    customerNameRequiredLabel: "কাস্টমারের নাম *",
+    mobileNumberLabel: "মোবাইল নম্বর",
+    updatingBtn: "আপডেট হচ্ছে...",
+    updateDetailsBtn: "তথ্য আপডেট করুন",
+    dangerZoneTitle: "সতর্কতা জোন (Danger Zone)",
+    deleteCustomerWarning:
+      "এই কাস্টমারকে ডিলিট করলে তার সাথে যুক্ত সমস্ত লেনদেনের হিসাব স্থায়ীভাবে মুছে যাবে।",
+    deleteCustomerBtn: "কাস্টমার ডিলিট করুন",
+    deleteCustomerConfirmTitle: "কাস্টমার ডিলিট করবেন?",
+    deleteCustomerConfirmDesc:
+      "আপনি কি নিশ্চিত? এতে কাস্টমার এবং তার সমস্ত লেনদেনের হিসাব মুছে যাবে।",
+
+    // 8. Reports (Customer & Cashbook)
+    statementSuffix: "স্টেটমেন্ট",
+    allCustomersReportTitle: "সকল কাস্টমার রিপোর্ট",
+    cashbookReportTitle: "ক্যাশবুক রিপোর্ট",
+    startDateLabel: "শুরুর তারিখ",
+    endDateLabel: "শেষ তারিখ",
+    youGaveLabel: "আপনি দিয়েছেন",
+    youGotLabel: "আপনি পেয়েছেন",
+    netBalanceLabel: "মোট ব্যালেন্স",
+    totalInLabel: "মোট জমা (IN)",
+    totalOutLabel: "মোট খরচ (OUT)",
+    dateCol: "তারিখ",
+    dailyInCol: "দৈনিক জমা",
+    dailyOutCol: "দৈনিক খরচ",
+    totalBalCol: "ব্যালেন্স",
+    noTransactionsInRange: "এই তারিখের মধ্যে কোনো লেনদেন পাওয়া যায়নি।",
+    noCashbookInRange: "এই তারিখের মধ্যে কোনো ক্যাশবুক এন্ট্রি পাওয়া যায়নি।",
+    savePdfBtn: "পিডিএফ সেভ",
+    sharePdfBtn: "পিডিএফ শেয়ার",
+  },
+} as const;
+
+/**
+ * Returns the localized strings object for the given language code.
+ */
+export function getStrings(lang: AppLanguage) {
+  return TRANSLATIONS[lang] ?? TRANSLATIONS.en;
+}

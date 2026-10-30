@@ -20,6 +20,7 @@ import {
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
 import { type CurrencyCode } from "../utils/formatCurrency";
+import { getStrings } from "../constants/translations";
 
 export interface BusinessSwitcherModalProps {
   visible: boolean;
@@ -33,6 +34,8 @@ export function BusinessSwitcherModal({
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
   const setActiveBusiness = useUiStore((state) => state.setActiveBusiness);
   const themeMode = useUiStore((state) => state.themeMode);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const colors = getThemeColors(themeMode);
 
   const [businesses, setBusinesses] = useState<BusinessWithCount[]>([]);
@@ -124,7 +127,7 @@ export function BusinessSwitcherModal({
             <Text
               style={[styles.sheetTitle, { color: colors.primaryTextDark }]}
             >
-              {isCreatingNew ? "Add New Business" : "Select Business"}
+              {isCreatingNew ? t.addNewBusinessTitle : t.selectBusinessTitle}
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -150,15 +153,15 @@ export function BusinessSwitcherModal({
               <Text
                 style={[styles.inputLabel, { color: colors.primaryTextDark }]}
               >
-                Business / Shop Name *
+                {t.businessShopNameLabel}
               </Text>
               <TextInput
                 value={newName}
-                onChangeText={(t) => {
-                  setNewName(t);
+                onChangeText={(txt) => {
+                  setNewName(txt);
                   if (errorMsg) setErrorMsg(null);
                 }}
-                placeholder="e.g. Wholesale Godown / Store 2"
+                placeholder={t.businessShopPlaceholder}
                 placeholderTextColor={colors.secondaryMutedText}
                 style={[
                   styles.textInput,
@@ -177,7 +180,7 @@ export function BusinessSwitcherModal({
               <Text
                 style={[styles.inputLabel, { color: colors.primaryTextDark }]}
               >
-                Currency
+                {t.currencyWord}
               </Text>
               <View style={styles.currencyToggleRow}>
                 {(["BDT", "INR"] as CurrencyCode[]).map((code) => {
@@ -235,7 +238,7 @@ export function BusinessSwitcherModal({
                       { color: colors.secondaryMutedText },
                     ]}
                   >
-                    BACK
+                    {t.backBtn}
                   </Text>
                 </Pressable>
 
@@ -246,7 +249,9 @@ export function BusinessSwitcherModal({
                     { backgroundColor: colors.primaryBlue },
                   ]}
                 >
-                  <Text style={styles.saveButtonText}>CREATE BUSINESS</Text>
+                  <Text style={styles.saveButtonText}>
+                    {t.createBusinessBtn}
+                  </Text>
                 </Pressable>
               </View>
             </View>
@@ -309,7 +314,9 @@ export function BusinessSwitcherModal({
                           ]}
                         >
                           {biz.customer_count}{" "}
-                          {biz.customer_count === 1 ? "Customer" : "Customers"}{" "}
+                          {biz.customer_count === 1
+                            ? t.customerSingular
+                            : t.customersWord}{" "}
                           • {biz.currency === "INR" ? "INR (₹)" : "BDT (৳)"}
                         </Text>
                       </View>
@@ -347,7 +354,7 @@ export function BusinessSwitcherModal({
                     color="#FFFFFF"
                   />
                   <Text style={styles.addNewBusinessBtnText}>
-                    + ADD NEW BUSINESS
+                    {t.addNewBusinessBtn}
                   </Text>
                 </Pressable>
               </View>
