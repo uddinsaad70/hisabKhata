@@ -132,6 +132,34 @@ export const TRANSLATIONS = {
     noCashbookInRange: "No cashbook entries found in this date range.",
     savePdfBtn: "SAVE PDF",
     sharePdfBtn: "SHARE PDF",
+
+    // 9. Customer Add, Entry Form & Entry Details
+    addNewCustomerTitle: "Add New Customer",
+    customerNamePlaceholder: "e.g. Younus Mg",
+    mobileNumberOptionalLabel: "Mobile Number (Optional)",
+    mobileNumberPlaceholder: "e.g. 01700000000",
+    savingBtn: "SAVING...",
+    saveCustomerBtn: "SAVE CUSTOMER",
+    searchContactsPlaceholder: "Search contacts...",
+    noNumberText: "No number",
+    enterDetailsPlaceholder: "Enter details (Items, bill no., etc.)",
+    entryDetailsTitle: "Entry Details",
+    entryBackedUp: "Entry is backed up",
+    entryNotBackedUp: "Entry is not backed up",
+    deleteBtn: "DELETE",
+    editEntryBtn: "EDIT ENTRY",
+    entryDeletedToast: "Entry Deleted",
+    deleteEntryConfirmTitle: "Delete this entry?",
+    deleteEntryConfirmDesc:
+      "Are you sure you want to delete this entry? This action can be undone within 5 seconds.",
+
+    // 10. Cashbook Entry Form & Entry Details
+    cashOutHeader: "CASH OUT [-]",
+    cashInHeader: "CASH IN [+]",
+    cashLabel: "Cash",
+    remarksPlaceholder: "Remarks or details...",
+    paymentModeLabel: "Payment Mode:",
+    cashbookDeletedToast: "Cashbook Entry Deleted",
   },
   bn: {
     // 1. Bottom Tab & Top Header Navigation
@@ -263,6 +291,34 @@ export const TRANSLATIONS = {
     noCashbookInRange: "এই তারিখের মধ্যে কোনো ক্যাশবুক এন্ট্রি পাওয়া যায়নি।",
     savePdfBtn: "পিডিএফ সেভ",
     sharePdfBtn: "পিডিএফ শেয়ার",
+
+    // 9. Customer Add, Entry Form & Entry Details
+    addNewCustomerTitle: "নতুন কাস্টমার যোগ করুন",
+    customerNamePlaceholder: "যেমন: ইউনুস ভাই",
+    mobileNumberOptionalLabel: "মোবাইল নম্বর (ঐচ্ছিক)",
+    mobileNumberPlaceholder: "যেমন: 01700000000",
+    savingBtn: "সেভ হচ্ছে...",
+    saveCustomerBtn: "কাস্টমার সেভ করুন",
+    searchContactsPlaceholder: "কন্টাক্ট খুঁজুন...",
+    noNumberText: "নম্বর নেই",
+    enterDetailsPlaceholder: "বিবরণ লিখুন (পণ্য, বিল নং ইত্যাদি)",
+    entryDetailsTitle: "লেনদেনের বিবরণ",
+    entryBackedUp: "এন্ট্রিটি ব্যাকআপ করা আছে",
+    entryNotBackedUp: "এন্ট্রিটি ব্যাকআপ করা নেই",
+    deleteBtn: "ডিলিট",
+    editEntryBtn: "এডিট করুন",
+    entryDeletedToast: "এন্ট্রি ডিলিট করা হয়েছে",
+    deleteEntryConfirmTitle: "এই এন্ট্রিটি ডিলিট করবেন?",
+    deleteEntryConfirmDesc:
+      "আপনি কি নিশ্চিতভাবে এই এন্ট্রিটি মুছে ফেলতে চান? এটি ৫ সেকেন্ডের মধ্যে আনডু (Undo) করা যাবে।",
+
+    // 10. Cashbook Entry Form & Entry Details
+    cashOutHeader: "ক্যাশ খরচ (OUT) [-]",
+    cashInHeader: "ক্যাশ জমা (IN) [+]",
+    cashLabel: "নগদ (Cash)",
+    remarksPlaceholder: "বিবরণ বা নোট লিখুন...",
+    paymentModeLabel: "পেমেন্ট মাধ্যম:",
+    cashbookDeletedToast: "ক্যাশবুক এন্ট্রি ডিলিট করা হয়েছে",
   },
 } as const;
 

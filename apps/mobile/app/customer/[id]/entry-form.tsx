@@ -32,6 +32,7 @@ import {
   getLocalTimeString,
   isFutureDate,
 } from "../../../utils/dateUtils";
+import { getStrings } from "../../../constants/translations";
 
 export default function CustomerEntryFormScreen() {
   const { id, type, entryId } = useLocalSearchParams<{
@@ -44,7 +45,13 @@ export default function CustomerEntryFormScreen() {
 
   const themeMode = useUiStore((state) => state.themeMode);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
+  const activeBusinessCurrency = useUiStore(
+    (state) => state.activeBusinessCurrency,
+  );
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const colors = getThemeColors(themeMode);
+  const currencySymbol = activeBusinessCurrency === "INR" ? "₹" : "৳";
 
   // Determine theme colors based on GAVE (Red) or GOT (Green)
   const isGave = type === "GAVE";
@@ -199,7 +206,9 @@ export default function CustomerEntryFormScreen() {
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </Pressable>
         <Text style={styles.headerTitle}>
-          {isGave ? "YOU GAVE ৳" : "YOU GOT ৳"}
+          {isGave
+            ? `${t.youGaveCol} ${currencySymbol}`
+            : `${t.youGotCol} ${currencySymbol}`}
         </Text>
       </View>
 
@@ -245,7 +254,7 @@ export default function CustomerEntryFormScreen() {
               />
               <TextInput
                 style={[styles.textInput, { color: colors.primaryTextDark }]}
-                placeholder="Enter details (Items, bill no., etc.)"
+                placeholder={t.enterDetailsPlaceholder}
                 placeholderTextColor={colors.secondaryMutedText}
                 value={details}
                 onChangeText={setDetails}
@@ -309,7 +318,7 @@ export default function CustomerEntryFormScreen() {
             pressed && { opacity: 0.8 },
           ]}
         >
-          <Text style={styles.saveBtnText}>SAVE</Text>
+          <Text style={styles.saveBtnText}>{t.saveBtn}</Text>
         </Pressable>
       </View>
 

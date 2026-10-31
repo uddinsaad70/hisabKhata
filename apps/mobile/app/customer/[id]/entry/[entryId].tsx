@@ -14,6 +14,7 @@ import {
   type CustomerEntryRow,
 } from "../../../../db/customerQueries";
 import { DeleteConfirmModal } from "../../../../components/DeleteConfirmModal";
+import { getStrings } from "../../../../constants/translations";
 
 export default function CustomerEntryDetailsScreen() {
   const { id, entryId } = useLocalSearchParams<{
@@ -27,6 +28,8 @@ export default function CustomerEntryDetailsScreen() {
     (state) => state.activeBusinessCurrency,
   );
   const showUndoSnackbar = useUiStore((state) => state.showUndoSnackbar);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const colors = getThemeColors(themeMode);
 
   const [entry, setEntry] = useState<CustomerEntryRow | null>(null);
@@ -61,7 +64,7 @@ export default function CustomerEntryDetailsScreen() {
         entryId,
         entryDomain: "customer",
         customerId: id,
-        message: "Entry Deleted",
+        message: t.entryDeletedToast,
       });
 
       router.back();
@@ -80,7 +83,7 @@ export default function CustomerEntryDetailsScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </Pressable>
-        <Text style={styles.headerTitle}>Entry Details</Text>
+        <Text style={styles.headerTitle}>{t.entryDetailsTitle}</Text>
       </View>
 
       <View style={styles.content}>
@@ -97,7 +100,7 @@ export default function CustomerEntryDetailsScreen() {
             <Text
               style={[styles.amountLabel, { color: colors.secondaryMutedText }]}
             >
-              {isGave ? "You Gave" : "You Got"}
+              {isGave ? t.youGaveLabel : t.youGotLabel}
             </Text>
             <Text style={[styles.amountValue, { color: headerColor }]}>
               {formatCurrency(entry.amount, activeBusinessCurrency, true)}
@@ -154,9 +157,7 @@ export default function CustomerEntryDetailsScreen() {
                 },
               ]}
             >
-              {entry.is_synced
-                ? "Entry is backed up"
-                : "Entry is not backed up"}
+              {entry.is_synced ? t.entryBackedUp : t.entryNotBackedUp}
             </Text>
           </View>
         </View>
@@ -177,7 +178,7 @@ export default function CustomerEntryDetailsScreen() {
         >
           <Ionicons name="trash-outline" size={20} color={colors.primaryRed} />
           <Text style={[styles.actionBtnText, { color: colors.primaryRed }]}>
-            DELETE
+            {t.deleteBtn}
           </Text>
         </Pressable>
         <Pressable
@@ -197,15 +198,15 @@ export default function CustomerEntryDetailsScreen() {
         >
           <Ionicons name="pencil-outline" size={20} color="#FFFFFF" />
           <Text style={[styles.actionBtnText, { color: "#FFFFFF" }]}>
-            EDIT ENTRY
+            {t.editEntryBtn}
           </Text>
         </Pressable>
       </View>
 
       <DeleteConfirmModal
         visible={deleteModalVisible}
-        title="Delete this entry?"
-        description="Are you sure you want to delete this entry? This action can be undone within 5 seconds."
+        title={t.deleteEntryConfirmTitle}
+        description={t.deleteEntryConfirmDesc}
         onCancel={() => setDeleteModalVisible(false)}
         onConfirm={handleDelete}
       />

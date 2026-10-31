@@ -21,6 +21,7 @@ import { useUiStore } from "../../store/uiStore";
 import { getThemeColors } from "../../constants/theme";
 import { getDbAdapter } from "../../db/client";
 import { checkDuplicatePhone, createCustomer } from "../../db/customerQueries";
+import { getStrings } from "../../constants/translations";
 
 const customerSchema = z.object({
   name: z.string().trim().min(1, "Customer name is required."),
@@ -33,6 +34,8 @@ export default function AddCustomerScreen() {
   const router = useRouter();
   const themeMode = useUiStore((state) => state.themeMode);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const colors = getThemeColors(themeMode);
 
   const [deviceContacts, setDeviceContacts] = useState<any[]>([]);
@@ -130,13 +133,13 @@ export default function AddCustomerScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </Pressable>
-        <Text style={styles.headerTitle}>Add New Customer</Text>
+        <Text style={styles.headerTitle}>{t.addNewCustomerTitle}</Text>
       </View>
 
       <View style={styles.content}>
         {/* Name Input */}
         <Text style={[styles.label, { color: colors.secondaryMutedText }]}>
-          Customer Name *
+          {t.customerNameRequiredLabel}
         </Text>
         <Controller
           control={control}
@@ -153,7 +156,7 @@ export default function AddCustomerScreen() {
                     : colors.borderDivider,
                 },
               ]}
-              placeholder="e.g. Younus Mg"
+              placeholder={t.customerNamePlaceholder}
               placeholderTextColor={colors.secondaryMutedText}
               onBlur={onBlur}
               onChangeText={onChange}
@@ -174,7 +177,7 @@ export default function AddCustomerScreen() {
             { color: colors.secondaryMutedText, marginTop: 12 },
           ]}
         >
-          Mobile Number (Optional)
+          {t.mobileNumberOptionalLabel}
         </Text>
         <Controller
           control={control}
@@ -189,7 +192,7 @@ export default function AddCustomerScreen() {
                   borderColor: colors.borderDivider,
                 },
               ]}
-              placeholder="e.g. 01700000000"
+              placeholder={t.mobileNumberPlaceholder}
               placeholderTextColor={colors.secondaryMutedText}
               keyboardType="phone-pad"
               onBlur={onBlur}
@@ -219,17 +222,12 @@ export default function AddCustomerScreen() {
           ]}
         >
           <Text style={styles.saveBtnText}>
-            {isSubmitting ? "SAVING..." : "SAVE CUSTOMER"}
+            {isSubmitting ? t.savingBtn : t.saveCustomerBtn}
           </Text>
         </Pressable>
 
         {/* Contacts List Section */}
         <View style={styles.contactSection}>
-          {/* <Text
-            style={[styles.contactHeader, { color: colors.secondaryMutedText }]}
-          >
-            — OR CHOOSE FROM CONTACTS —
-          </Text> */}
           {/* Dedicated Contact Search Bar */}
           <View
             style={[
@@ -248,7 +246,7 @@ export default function AddCustomerScreen() {
             <TextInput
               value={contactSearch}
               onChangeText={setContactSearch}
-              placeholder="Search contacts..."
+              placeholder={t.searchContactsPlaceholder}
               placeholderTextColor={colors.secondaryMutedText}
               style={[styles.searchInput, { color: colors.primaryTextDark }]}
             />
@@ -301,7 +299,7 @@ export default function AddCustomerScreen() {
                         { color: colors.secondaryMutedText },
                       ]}
                     >
-                      {item.phoneNumbers?.[0]?.number || "No number"}
+                      {item.phoneNumbers?.[0]?.number || t.noNumberText}
                     </Text>
                   </View>
                 </Pressable>

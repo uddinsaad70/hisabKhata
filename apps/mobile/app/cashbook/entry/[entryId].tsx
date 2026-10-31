@@ -14,6 +14,7 @@ import {
   type CashbookEntryRow,
 } from "../../../db/cashbookQueries";
 import { DeleteConfirmModal } from "../../../components/DeleteConfirmModal";
+import { getStrings } from "../../../constants/translations";
 
 export default function CashbookEntryDetailsScreen() {
   const { entryId } = useLocalSearchParams<{ entryId: string }>();
@@ -24,6 +25,8 @@ export default function CashbookEntryDetailsScreen() {
     (state) => state.activeBusinessCurrency,
   );
   const showUndoSnackbar = useUiStore((state) => state.showUndoSnackbar);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const colors = getThemeColors(themeMode);
 
   const [entry, setEntry] = useState<CashbookEntryRow | null>(null);
@@ -57,7 +60,7 @@ export default function CashbookEntryDetailsScreen() {
       showUndoSnackbar({
         entryId,
         entryDomain: "cashbook",
-        message: "Cashbook Entry Deleted",
+        message: t.cashbookDeletedToast,
       });
 
       router.back();
@@ -76,7 +79,7 @@ export default function CashbookEntryDetailsScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </Pressable>
-        <Text style={styles.headerTitle}>Entry Details</Text>
+        <Text style={styles.headerTitle}>{t.entryDetailsTitle}</Text>
       </View>
 
       <View style={styles.content}>
@@ -93,7 +96,7 @@ export default function CashbookEntryDetailsScreen() {
             <Text
               style={[styles.amountLabel, { color: colors.secondaryMutedText }]}
             >
-              {isOut ? "CASH OUT [-]" : "CASH IN [+]"}
+              {isOut ? t.cashOutHeader : t.cashInHeader}
             </Text>
             <Text style={[styles.amountValue, { color: headerColor }]}>
               {formatCurrency(entry.amount, activeBusinessCurrency, true)}
@@ -128,9 +131,9 @@ export default function CashbookEntryDetailsScreen() {
             <Text
               style={[styles.detailText, { color: colors.primaryTextDark }]}
             >
-              Payment Mode:{" "}
+              {t.paymentModeLabel}{" "}
               <Text style={{ fontFamily: "Inter_600SemiBold" }}>
-                {entry.payment_mode === "ONLINE" ? "Online" : "Cash"}
+                {entry.payment_mode === "ONLINE" ? t.online : t.cashLabel}
               </Text>
             </Text>
           </View>
@@ -170,9 +173,7 @@ export default function CashbookEntryDetailsScreen() {
                 },
               ]}
             >
-              {entry.is_synced
-                ? "Entry is backed up"
-                : "Entry is not backed up"}
+              {entry.is_synced ? t.entryBackedUp : t.entryNotBackedUp}
             </Text>
           </View>
         </View>
@@ -193,7 +194,7 @@ export default function CashbookEntryDetailsScreen() {
         >
           <Ionicons name="trash-outline" size={20} color={colors.primaryRed} />
           <Text style={[styles.actionBtnText, { color: colors.primaryRed }]}>
-            DELETE
+            {t.deleteBtn}
           </Text>
         </Pressable>
         <Pressable
@@ -213,15 +214,15 @@ export default function CashbookEntryDetailsScreen() {
         >
           <Ionicons name="pencil-outline" size={20} color="#FFFFFF" />
           <Text style={[styles.actionBtnText, { color: "#FFFFFF" }]}>
-            EDIT ENTRY
+            {t.editEntryBtn}
           </Text>
         </Pressable>
       </View>
 
       <DeleteConfirmModal
         visible={deleteModalVisible}
-        title="Delete this cashbook entry?"
-        description="Are you sure? This action can be undone within 5 seconds."
+        title={t.deleteEntryConfirmTitle}
+        description={t.deleteEntryConfirmDesc}
         onCancel={() => setDeleteModalVisible(false)}
         onConfirm={handleDelete}
       />
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: Platform.OS === "android" ? 16 : 30,
+    paddingTop: Platform.OS === "android" ? 42 : 50,
     paddingBottom: 16,
     paddingHorizontal: 16,
   },

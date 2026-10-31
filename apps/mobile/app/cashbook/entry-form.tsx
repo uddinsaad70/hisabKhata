@@ -33,6 +33,7 @@ import {
   getLocalTimeString,
   isFutureDate,
 } from "../../utils/dateUtils";
+import { getStrings } from "../../constants/translations";
 
 export default function CashbookEntryFormScreen() {
   const { type, entryId } = useLocalSearchParams<{
@@ -44,6 +45,8 @@ export default function CashbookEntryFormScreen() {
 
   const themeMode = useUiStore((state) => state.themeMode);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const colors = getThemeColors(themeMode);
 
   const isOut = type === "OUT";
@@ -189,7 +192,7 @@ export default function CashbookEntryFormScreen() {
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </Pressable>
         <Text style={styles.headerTitle}>
-          {isOut ? "CASH OUT [-]" : "CASH IN [+]"}
+          {isOut ? t.cashOutHeader : t.cashInHeader}
         </Text>
       </View>
 
@@ -239,7 +242,7 @@ export default function CashbookEntryFormScreen() {
                       : { color: colors.secondaryMutedText },
                   ]}
                 >
-                  Cash
+                  {t.cashLabel}
                 </Text>
               </Pressable>
               <Pressable
@@ -260,7 +263,7 @@ export default function CashbookEntryFormScreen() {
                       : { color: colors.secondaryMutedText },
                   ]}
                 >
-                  Online
+                  {t.online}
                 </Text>
               </Pressable>
             </View>
@@ -281,7 +284,7 @@ export default function CashbookEntryFormScreen() {
               />
               <TextInput
                 style={[styles.textInput, { color: colors.primaryTextDark }]}
-                placeholder="Remarks or details..."
+                placeholder={t.remarksPlaceholder}
                 placeholderTextColor={colors.secondaryMutedText}
                 value={details}
                 onChangeText={setDetails}
@@ -341,7 +344,7 @@ export default function CashbookEntryFormScreen() {
             pressed && { opacity: 0.8 },
           ]}
         >
-          <Text style={styles.saveBtnText}>SAVE</Text>
+          <Text style={styles.saveBtnText}>{t.saveBtn}</Text>
         </Pressable>
       </View>
 
@@ -359,7 +362,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: Platform.OS === "android" ? 16 : 30,
+    paddingTop: Platform.OS === "android" ? 42 : 50,
     paddingBottom: 16,
     paddingHorizontal: 16,
   },
