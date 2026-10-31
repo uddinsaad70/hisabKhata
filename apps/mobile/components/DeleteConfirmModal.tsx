@@ -4,6 +4,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
+import { getStrings } from "../constants/translations";
 
 export interface DeleteConfirmModalProps {
   visible: boolean;
@@ -15,12 +16,14 @@ export interface DeleteConfirmModalProps {
 
 export function DeleteConfirmModal({
   visible,
-  title = "Delete Entry?",
-  description = "Are you sure you want to delete this? This action can be undone within 5 seconds.",
+  title,
+  description,
   onCancel,
   onConfirm,
 }: DeleteConfirmModalProps) {
   const themeMode = useUiStore((state) => state.themeMode);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const colors = getThemeColors(themeMode);
 
   return (
@@ -47,12 +50,12 @@ export function DeleteConfirmModal({
             />
           </View>
           <Text style={[styles.title, { color: colors.primaryTextDark }]}>
-            {title}
+            {title ?? t.deleteEntryConfirmTitle}
           </Text>
           <Text
             style={[styles.description, { color: colors.secondaryMutedText }]}
           >
-            {description}
+            {description ?? t.deleteEntryConfirmDesc}
           </Text>
 
           <View style={styles.buttonRow}>
@@ -64,7 +67,7 @@ export function DeleteConfirmModal({
               <Text
                 style={[styles.buttonText, { color: colors.primaryTextDark }]}
               >
-                CANCEL
+                {t.cancelBtn}
               </Text>
             </Pressable>
             <Pressable
@@ -77,7 +80,7 @@ export function DeleteConfirmModal({
               ]}
             >
               <Text style={[styles.buttonText, { color: "#FFFFFF" }]}>
-                DELETE
+                {t.deleteBtn}
               </Text>
             </Pressable>
           </View>

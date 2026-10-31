@@ -8,25 +8,12 @@ import {
   type CustomerSort,
 } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
+import { getStrings } from "../constants/translations";
 
 export interface CustomerFilterModalProps {
   visible: boolean;
   onClose: () => void;
 }
-
-const FILTER_OPTIONS: { value: CustomerFilter; label: string }[] = [
-  { value: "ALL", label: "All" },
-  { value: "YOU_WILL_GET", label: "You will get" },
-  { value: "YOU_WILL_GIVE", label: "You will give" },
-  { value: "SETTLED", label: "Settled" },
-];
-
-const SORT_OPTIONS: { value: CustomerSort; label: string }[] = [
-  { value: "MOST_RECENT", label: "Most Recent" },
-  { value: "OLDEST", label: "Oldest" },
-  { value: "HIGHEST_AMOUNT", label: "Highest Amount" },
-  { value: "NAME_AZ", label: "Name (A-Z)" },
-];
 
 export function CustomerFilterModal({
   visible,
@@ -40,8 +27,24 @@ export function CustomerFilterModal({
     (state) => state.resetCustomerFilters,
   );
   const themeMode = useUiStore((state) => state.themeMode);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
 
   const colors = getThemeColors(themeMode);
+
+  const filterOptions: { value: CustomerFilter; label: string }[] = [
+    { value: "ALL", label: t.filterAll },
+    { value: "YOU_WILL_GET", label: t.youWillGet },
+    { value: "YOU_WILL_GIVE", label: t.youWillGive },
+    { value: "SETTLED", label: t.filterSettled },
+  ];
+
+  const sortOptions: { value: CustomerSort; label: string }[] = [
+    { value: "MOST_RECENT", label: t.sortMostRecent },
+    { value: "OLDEST", label: t.sortOldest },
+    { value: "HIGHEST_AMOUNT", label: t.sortHighestAmount },
+    { value: "NAME_AZ", label: t.sortNameAZ },
+  ];
 
   const handleReset = () => {
     resetCustomerFilters();
@@ -77,7 +80,7 @@ export function CustomerFilterModal({
             <Text
               style={[styles.headerTitle, { color: colors.primaryTextDark }]}
             >
-              Filter & Sort Customers
+              {t.filterAndSortTitle}
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -97,10 +100,10 @@ export function CustomerFilterModal({
           <Text
             style={[styles.sectionTitle, { color: colors.secondaryMutedText }]}
           >
-            FILTER BY STATUS
+            {t.filterByStatusSection}
           </Text>
           <View style={styles.chipsRow}>
-            {FILTER_OPTIONS.map((opt) => {
+            {filterOptions.map((opt) => {
               const selected = customerFilter === opt.value;
               return (
                 <Pressable
@@ -143,10 +146,10 @@ export function CustomerFilterModal({
               { color: colors.secondaryMutedText },
             ]}
           >
-            SORT BY
+            {t.sortBySection}
           </Text>
           <View style={styles.sortList}>
-            {SORT_OPTIONS.map((opt) => {
+            {sortOptions.map((opt) => {
               const selected = customerSort === opt.value;
               return (
                 <Pressable
@@ -202,7 +205,7 @@ export function CustomerFilterModal({
                   { color: colors.secondaryMutedText },
                 ]}
               >
-                CLEAR ALL
+                {t.clearAllBtn}
               </Text>
             </Pressable>
 
@@ -214,7 +217,7 @@ export function CustomerFilterModal({
                 { backgroundColor: colors.primaryBlue },
               ]}
             >
-              <Text style={styles.applyButtonText}>VIEW RESULTS</Text>
+              <Text style={styles.applyButtonText}>{t.viewResultsBtn}</Text>
             </Pressable>
           </View>
         </View>

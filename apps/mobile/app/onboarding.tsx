@@ -18,11 +18,14 @@ import { createBusiness } from "../db/businessQueries";
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
 import { type CurrencyCode } from "../utils/formatCurrency";
+import { getStrings } from "../constants/translations";
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const themeMode = useUiStore((state) => state.themeMode);
   const setActiveBusiness = useUiStore((state) => state.setActiveBusiness);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const colors = getThemeColors(themeMode);
 
   const [businessName, setBusinessName] = useState("Amar Dokan");
@@ -76,9 +79,7 @@ export default function OnboardingScreen() {
             <Ionicons name="book" size={34} color={colors.activeTabIndicator} />
           </View>
           <Text style={styles.brandTitle}>HisabKhata</Text>
-          <Text style={styles.brandSubtitle}>
-            Fast, Offline-First Customer Ledger & Cashbook
-          </Text>
+          <Text style={styles.brandSubtitle}>{t.onboardingSubtitle}</Text>
         </View>
 
         {/* Bottom Form Card */}
@@ -86,7 +87,7 @@ export default function OnboardingScreen() {
           style={[styles.formCard, { backgroundColor: colors.cardSurface }]}
         >
           <Text style={[styles.cardTitle, { color: colors.primaryTextDark }]}>
-            Create Your First Business
+            {t.onboardingCardTitle}
           </Text>
           <Text
             style={[
@@ -94,13 +95,12 @@ export default function OnboardingScreen() {
               { color: colors.secondaryMutedText },
             ]}
           >
-            Set up your shop or business profile to start tracking customer dues
-            and daily cashbook entries.
+            {t.onboardingCardDesc}
           </Text>
 
           {/* Business Name Input */}
           <Text style={[styles.fieldLabel, { color: colors.primaryTextDark }]}>
-            Business / Shop Name *
+            {t.businessShopNameLabel}
           </Text>
           <TextInput
             value={businessName}
@@ -108,7 +108,7 @@ export default function OnboardingScreen() {
               setBusinessName(text);
               if (errorMsg) setErrorMsg(null);
             }}
-            placeholder="e.g. Amar Dokan / Reza Enterprise"
+            placeholder={t.onboardingPlaceholder}
             placeholderTextColor={colors.secondaryMutedText}
             style={[
               styles.textInput,
@@ -126,7 +126,7 @@ export default function OnboardingScreen() {
 
           {/* Currency Selector */}
           <Text style={[styles.fieldLabel, { color: colors.primaryTextDark }]}>
-            Default Currency
+            {t.defaultCurrencyLabel}
           </Text>
           <View style={styles.currencyRow}>
             <Pressable
@@ -174,7 +174,7 @@ export default function OnboardingScreen() {
                     { color: colors.secondaryMutedText },
                   ]}
                 >
-                  Bangladeshi Taka
+                  {t.bangladeshiTaka}
                 </Text>
               </View>
             </Pressable>
@@ -224,7 +224,7 @@ export default function OnboardingScreen() {
                     { color: colors.secondaryMutedText },
                   ]}
                 >
-                  Indian Rupee
+                  {t.indianRupee}
                 </Text>
               </View>
             </Pressable>
@@ -252,9 +252,7 @@ export default function OnboardingScreen() {
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <>
-                <Text style={styles.submitButtonText}>
-                  START USING HISABKHATA
-                </Text>
+                <Text style={styles.submitButtonText}>{t.startUsingBtn}</Text>
                 <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
               </>
             )}

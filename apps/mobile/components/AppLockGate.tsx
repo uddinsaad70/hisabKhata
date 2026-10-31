@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
+import { getStrings } from "../constants/translations";
 import {
   getAppLockConfig,
   promptBiometricUnlock,
@@ -23,6 +24,8 @@ interface Props {
 
 export function AppLockGate({ children }: Props) {
   const themeMode = useUiStore((state) => state.themeMode);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const colors = getThemeColors(themeMode);
 
   const [isLocked, setIsLocked] = useState(false);
@@ -85,7 +88,7 @@ export function AppLockGate({ children }: Props) {
         setIsLocked(false);
         setPinInput("");
       } else {
-        setErrorText("Incorrect PIN. Please try again.");
+        setErrorText(t.incorrectPinError);
         setPinInput("");
       }
     }
@@ -112,9 +115,9 @@ export function AppLockGate({ children }: Props) {
             <View style={styles.iconBadge}>
               <Ionicons name="lock-closed" size={32} color="#FFFFFF" />
             </View>
-            <Text style={styles.lockTitle}>HisabKhata Locked</Text>
+            <Text style={styles.lockTitle}>{t.appLockedTitle}</Text>
             <Text style={styles.lockSubtitle}>
-              Enter your 4-digit security PIN
+              {t.enterSecurityPinSubtitle}
             </Text>
 
             {/* 4 PIN Dots */}

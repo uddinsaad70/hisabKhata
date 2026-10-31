@@ -11,6 +11,7 @@ import { useUiStore } from "../store/uiStore";
 import { getDbAdapter } from "../db/client";
 import { undoDeleteCustomerEntry } from "../db/customerQueries";
 import { undoDeleteCashbookEntry } from "../db/cashbookQueries";
+import { getStrings } from "../constants/translations";
 
 export function UndoSnackbar() {
   const { visible, entryId, entryDomain, customerId, message } = useUiStore(
@@ -18,6 +19,8 @@ export function UndoSnackbar() {
   );
   const hideUndoSnackbar = useUiStore((state) => state.hideUndoSnackbar);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
 
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -76,7 +79,7 @@ export function UndoSnackbar() {
     <Animated.View style={[styles.container, { opacity }]}>
       <Text style={styles.messageText}>{message}</Text>
       <Pressable onPress={handleUndo} hitSlop={15} style={styles.undoBtn}>
-        <Text style={styles.undoText}>UNDO</Text>
+        <Text style={styles.undoText}>{t.undoBtn}</Text>
       </Pressable>
     </Animated.View>
   );
