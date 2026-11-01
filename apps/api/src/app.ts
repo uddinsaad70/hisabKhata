@@ -13,6 +13,7 @@ import { pinoHttp } from "pino-http";
 import { env } from "./config/env.js";
 import { sanitizeBigIntForJson } from "./utils/bigintSerializer.js";
 import { authRouter } from "./auth/auth.routes.js";
+import { syncRouter } from "./sync/sync.routes.js";
 
 export const logger = pino({
   level: env.NODE_ENV === "test" ? "silent" : "info",
@@ -78,7 +79,10 @@ export function createApp(): Express {
   // 7. Authentication & Profile Routes (/auth/*)
   app.use("/auth", authRouter);
 
-  // 8. 404 Fallback
+  // 8. Cloud Sync Routes (/sync/*)
+  app.use("/sync", syncRouter);
+
+  // 9. 404 Fallback
   app.use((_req: Request, res: Response) => {
     res.status(404).json({
       error: "NOT_FOUND",
@@ -86,7 +90,7 @@ export function createApp(): Express {
     });
   });
 
-  // 9. Global Error Handler
+  // 10. Global Error Handler
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     logger.error({ err }, "Unhandled API error");
     res.status(500).json({
