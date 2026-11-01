@@ -8,8 +8,8 @@ import {
   type AuthenticatedRequest,
 } from "../middleware/authMiddleware.js";
 import { requireBusinessOwnership } from "../middleware/ownershipMiddleware.js";
-import { syncPushRequestSchema } from "./sync.schema.js";
-import { processPushBatch, SyncError } from "./sync.service.js";
+import { syncPullQuerySchema, syncPushRequestSchema } from "./sync.schema.js";
+import { processPull, processPushBatch, SyncError } from "./sync.service.js";
 
 export const syncRouter = Router();
 
@@ -26,6 +26,28 @@ const syncRateLimiter = rateLimit({
 
 syncRouter.use(syncRateLimiter);
 
+function handleSyncRouteError(err: unknown, res: Response): void {
+  if (err instanceof ZodError) {
+    res.status(400).json({
+      error: "VALIDATION_ERROR",
+      message: err.errors[0]?.message || "Invalid sync request parameters.",
+      details: err.errors,
+    });
+    return;
+  }
+  if (err instanceof SyncError) {
+    res.status(err.statusCode).json({
+      error: err.code,
+      message: err.message,
+    });
+    return;
+  }
+  res.status(500).json({
+    error: "INTERNAL_SERVER_ERROR",
+    message: err instanceof Error ? err.message : "Sync operation failed.",
+  });
+}
+
 /**
  * POST /sync/push
  * Protected by JWT authMiddleware and business_id ownership check.
@@ -41,25 +63,31 @@ syncRouter.post(
       const result = await processPushBatch(userId, parsed);
       res.status(200).json(result);
     } catch (err) {
-      if (err instanceof ZodError) {
-        res.status(400).json({
-          error: "VALIDATION_ERROR",
-          message: err.errors[0]?.message || "Invalid sync push payload.",
-          details: err.errors,
-        });
-        return;
-      }
-      if (err instanceof SyncError) {
-        res.status(err.statusCode).json({
-          error: err.code,
-          message: err.message,
-        });
-        return;
-      }
-      res.status(500).json({
-        error: "INTERNAL_SERVER_ERROR",
-        message: err instanceof Error ? err.message : "Sync push failed.",
+      handleSyncRouteError(err, res);
+    }
+  },
+);
+
+/**
+ * GET /sync/pull?deviceId=...&cursor=...&limit=200
+ * Protected by JWT authMiddleware; pulls only businesses owned by req.userId.
+ */
+syncRouter.get(
+  "/pull",
+  authMiddleware,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const query = syncPullQuerySchema.parse(req.query);
+      const result = await processPull({
+        userId,
+        deviceId: query.deviceId,
+        cursor: query.cursor,
+        limit: query.limit,
       });
+      res.status(200).json(result);
+    } catch (err) {
+      handleSyncRouteError(err, res);
     }
   },
 );

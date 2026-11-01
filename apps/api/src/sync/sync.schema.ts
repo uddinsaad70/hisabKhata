@@ -88,3 +88,17 @@ export const syncPushRequestSchema = z
   });
 
 export type SyncPushRequestInput = z.infer<typeof syncPushRequestSchema>;
+
+// CP24: GET /sync/pull query validation schema
+export const syncPullQuerySchema = z.object({
+  deviceId: z.string().trim().min(1, "deviceId query param is required"),
+  cursor: z.string().trim().optional(),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1, "limit must be at least 1")
+    .max(500, "limit cannot exceed 500")
+    .default(200),
+});
+
+export type SyncPullQueryInput = z.infer<typeof syncPullQuerySchema>;
