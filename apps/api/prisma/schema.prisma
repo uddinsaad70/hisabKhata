@@ -1,0 +1,228 @@
+// apps/api/prisma/schema.prisma
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// Equivalent Raw SQL:
+// CREATE TABLE users (
+//   id UUID PRIMARY KEY,
+//   email TEXT UNIQUE NOT NULL,
+//   name TEXT NOT NULL,
+//   password_hash TEXT,
+//   google_sub TEXT UNIQUE,
+//   avatar_base64 TEXT,
+//   created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+//   updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+// );
+model User {
+    id           String   @id @default(uuid()) @db.Uuid
+    email        String   @unique
+    name         String
+    passwordHash String?  @map("password_hash")
+    googleSub    String?  @unique @map("google_sub")
+    avatarBase64 String?  @map("avatar_base64") @db.Text
+    createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+    refreshTokens RefreshToken[]
+    devices       Device[]
+    businesses    Business[]
+
+    @@map("users")
+}
+
+// Equivalent Raw SQL:
+// CREATE TABLE refresh_tokens (
+//   id UUID PRIMARY KEY,
+//   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+//   device_id TEXT NOT NULL,
+//   token_hash TEXT UNIQUE NOT NULL,
+//   expires_at TIMESTAMPTZ NOT NULL,
+//   revoked_at TIMESTAMPTZ,
+//   created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+// );
+model RefreshToken {
+    id        String    @id @default(uuid()) @db.Uuid
+    userId    String    @map("user_id") @db.Uuid
+    deviceId  String    @map("device_id")
+    tokenHash String    @unique @map("token_hash")
+    expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+    revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+    createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId, deviceId])
+    @@map("refresh_tokens")
+}
+
+// Equivalent Raw SQL:
+// CREATE TABLE devices (
+//   device_id TEXT PRIMARY KEY,
+//   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+//   device_name TEXT,
+//   platform TEXT,
+//   last_pulled_cursor TEXT,
+//   last_pulled_at TIMESTAMPTZ,
+//   last_seen_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+//   created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+// );
+model Device {
+    deviceId         String    @id @map("device_id")
+    userId           String    @map("user_id") @db.Uuid
+    deviceName       String?   @map("device_name")
+    platform         String?
+    lastPulledCursor String?   @map("last_pulled_cursor")
+    lastPulledAt     DateTime? @map("last_pulled_at") @db.Timestamptz(6)
+    lastSeenAt       DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+    createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId, lastPulledAt])
+    @@map("devices")
+}
+
+// Equivalent Raw SQL:
+// CREATE TABLE businesses (
+//   id UUID PRIMARY KEY,
+//   owner_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+//   name TEXT NOT NULL,
+//   currency VARCHAR(3) NOT NULL DEFAULT 'BDT',
+//   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+//   created_at BIGINT NOT NULL,
+//   updated_at BIGINT NOT NULL,
+//   server_updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+// );
+model Business {
+    id              String   @id @db.Uuid
+    ownerUserId     String   @map("owner_user_id") @db.Uuid
+    name            String
+    currency        String   @default("BDT") @db.VarChar(3)
+    isDeleted       Boolean  @default(false) @map("is_deleted")
+    createdAt       BigInt   @map("created_at")
+    updatedAt       BigInt   @map("updated_at")
+    serverUpdatedAt DateTime @default(now()) @map("server_updated_at") @db.Timestamptz(6)
+
+    owner           User            @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+    customers       Customer[]
+    customerEntries CustomerEntry[]
+    cashbookEntries CashbookEntry[]
+
+    @@index([ownerUserId, serverUpdatedAt, id])
+    @@map("businesses")
+}
+
+// Equivalent Raw SQL:
+// CREATE TABLE customers (
+//   id UUID PRIMARY KEY,
+//   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+//   name TEXT NOT NULL,
+//   phone TEXT,
+//   avatar_initials VARCHAR(4) NOT NULL,
+//   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+//   created_at BIGINT NOT NULL,
+//   updated_at BIGINT NOT NULL,
+//   server_updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+// );
+// Note: No net_balance column on server! Balance is derived on mobile via Window Function / recomputeBalance.
+model Customer {
+    id              String   @id @db.Uuid
+    businessId      String   @map("business_id") @db.Uuid
+    name            String
+    phone           String?
+    avatarInitials  String   @map("avatar_initials") @db.VarChar(4)
+    isDeleted       Boolean  @default(false) @map("is_deleted")
+    createdAt       BigInt   @map("created_at")
+    updatedAt       BigInt   @map("updated_at")
+    serverUpdatedAt DateTime @default(now()) @map("server_updated_at") @db.Timestamptz(6)
+
+    business Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+    entries  CustomerEntry[]
+
+    @@index([businessId, serverUpdatedAt, id])
+    @@map("customers")
+}
+
+// Equivalent Raw SQL:
+// CREATE TABLE customer_entries (
+//   id UUID PRIMARY KEY,
+//   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+//   customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+//   type VARCHAR(10) NOT NULL CHECK (type IN ('GAVE', 'GOT')),
+//   amount NUMERIC(14, 2) NOT NULL,
+//   details TEXT,
+//   entry_date VARCHAR(10) NOT NULL,
+//   entry_time VARCHAR(12) NOT NULL,
+//   timestamp BIGINT NOT NULL,
+//   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+//   created_at BIGINT NOT NULL,
+//   updated_at BIGINT NOT NULL,
+//   server_updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+// );
+model CustomerEntry {
+    id              String   @id @db.Uuid
+    businessId      String   @map("business_id") @db.Uuid
+    customerId      String   @map("customer_id") @db.Uuid
+    type            String   @db.VarChar(10)
+    amount          Decimal  @db.Decimal(14, 2)
+    details         String?
+    entryDate       String   @map("entry_date") @db.VarChar(10)
+    entryTime       String   @map("entry_time") @db.VarChar(12)
+    timestamp       BigInt
+    isDeleted       Boolean  @default(false) @map("is_deleted")
+    createdAt       BigInt   @map("created_at")
+    updatedAt       BigInt   @map("updated_at")
+    serverUpdatedAt DateTime @default(now()) @map("server_updated_at") @db.Timestamptz(6)
+
+    business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+    customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+    @@index([businessId, serverUpdatedAt, id])
+    @@index([customerId, entryDate, timestamp])
+    @@map("customer_entries")
+}
+
+// Equivalent Raw SQL:
+// CREATE TABLE cashbook_entries (
+//   id UUID PRIMARY KEY,
+//   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+//   type VARCHAR(10) NOT NULL CHECK (type IN ('IN', 'OUT')),
+//   payment_mode VARCHAR(10) NOT NULL DEFAULT 'CASH' CHECK (payment_mode IN ('CASH', 'ONLINE')),
+//   amount NUMERIC(14, 2) NOT NULL,
+//   details TEXT,
+//   entry_date VARCHAR(10) NOT NULL,
+//   entry_time VARCHAR(12) NOT NULL,
+//   timestamp BIGINT NOT NULL,
+//   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+//   created_at BIGINT NOT NULL,
+//   updated_at BIGINT NOT NULL,
+//   server_updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+// );
+model CashbookEntry {
+    id              String   @id @db.Uuid
+    businessId      String   @map("business_id") @db.Uuid
+    type            String   @db.VarChar(10)
+    paymentMode     String   @default("CASH") @map("payment_mode") @db.VarChar(10)
+    amount          Decimal  @db.Decimal(14, 2)
+    details         String?
+    entryDate       String   @map("entry_date") @db.VarChar(10)
+    entryTime       String   @map("entry_time") @db.VarChar(12)
+    timestamp       BigInt
+    isDeleted       Boolean  @default(false) @map("is_deleted")
+    createdAt       BigInt   @map("created_at")
+    updatedAt       BigInt   @map("updated_at")
+    serverUpdatedAt DateTime @default(now()) @map("server_updated_at") @db.Timestamptz(6)
+
+    business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+    @@index([businessId, serverUpdatedAt, id])
+    @@index([businessId, entryDate, timestamp])
+    @@map("cashbook_entries")
+}
