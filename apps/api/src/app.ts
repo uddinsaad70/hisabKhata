@@ -12,6 +12,7 @@ import pino from "pino";
 import { pinoHttp } from "pino-http";
 import { env } from "./config/env.js";
 import { sanitizeBigIntForJson } from "./utils/bigintSerializer.js";
+import { authRouter } from "./auth/auth.routes.js";
 
 export const logger = pino({
   level: env.NODE_ENV === "test" ? "silent" : "info",
@@ -45,7 +46,7 @@ export function createApp(): Express {
 
   // 4. Global API rate limiter
   const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    windowMs: 15 * 60 * 1000,
     max: 300,
     standardHeaders: true,
     legacyHeaders: false,
@@ -74,7 +75,10 @@ export function createApp(): Express {
     });
   });
 
-  // 7. 404 Fallback
+  // 7. Authentication & Profile Routes (/auth/*)
+  app.use("/auth", authRouter);
+
+  // 8. 404 Fallback
   app.use((_req: Request, res: Response) => {
     res.status(404).json({
       error: "NOT_FOUND",
@@ -82,7 +86,7 @@ export function createApp(): Express {
     });
   });
 
-  // 8. Global Error Handler
+  // 9. Global Error Handler
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     logger.error({ err }, "Unhandled API error");
     res.status(500).json({
