@@ -14,6 +14,7 @@ import { env } from "./config/env.js";
 import { sanitizeBigIntForJson } from "./utils/bigintSerializer.js";
 import { authRouter } from "./auth/auth.routes.js";
 import { syncRouter } from "./sync/sync.routes.js";
+import { docsRouter } from "./docs/openapi.js";
 
 export const logger = pino({
   level: env.NODE_ENV === "test" ? "silent" : "info",
@@ -31,8 +32,12 @@ export const logger = pino({
 export function createApp(): Express {
   const app = express();
 
-  // 1. Security & CORS headers
-  app.use(helmet());
+  // 1. Security & CORS headers (disable strict CSP so /docs Swagger UI renders cleanly)
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+    }),
+  );
   app.use(cors());
 
   // 2. JSON body parser (up to 5MB to support batch sync & small Base64 avatars)
@@ -76,13 +81,16 @@ export function createApp(): Express {
     });
   });
 
-  // 7. Authentication & Profile Routes (/auth/*)
+  // 7. OpenAPI 3.1 Documentation (/docs & /docs/openapi.json)
+  app.use("/docs", docsRouter);
+
+  // 8. Authentication & Profile Routes (/auth/*)
   app.use("/auth", authRouter);
 
-  // 8. Cloud Sync Routes (/sync/*)
+  // 9. Cloud Sync Routes (/sync/*)
   app.use("/sync", syncRouter);
 
-  // 9. 404 Fallback
+  // 10. 404 Fallback
   app.use((_req: Request, res: Response) => {
     res.status(404).json({
       error: "NOT_FOUND",
@@ -90,7 +98,7 @@ export function createApp(): Express {
     });
   });
 
-  // 10. Global Error Handler
+  // 11. Global Error Handler
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     logger.error({ err }, "Unhandled API error");
     res.status(500).json({
