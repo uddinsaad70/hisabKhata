@@ -337,3 +337,30 @@ export async function pickAndRestoreBackupJson(
     entriesCount: customerEntries.length + cashbookEntries.length,
   };
 }
+
+/**
+ * Marks all records for the given business as synced (is_synced = 1).
+ */
+export async function markAllBusinessRecordsSynced(
+  db: DatabaseAdapter,
+  businessId: string,
+): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      `UPDATE businesses SET is_synced = 1 WHERE id = ? AND is_synced = 0;`,
+      [businessId],
+    );
+    await db.runAsync(
+      `UPDATE customers SET is_synced = 1 WHERE business_id = ? AND is_synced = 0;`,
+      [businessId],
+    );
+    await db.runAsync(
+      `UPDATE customer_entries SET is_synced = 1 WHERE business_id = ? AND is_synced = 0;`,
+      [businessId],
+    );
+    await db.runAsync(
+      `UPDATE cashbook_entries SET is_synced = 1 WHERE business_id = ? AND is_synced = 0;`,
+      [businessId],
+    );
+  });
+}

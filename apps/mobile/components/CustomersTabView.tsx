@@ -7,6 +7,7 @@ import {
   Text,
   TextInput,
   View,
+  DeviceEventEmitter,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -80,6 +81,19 @@ export function CustomersTabView() {
 
   useEffect(() => {
     void loadCustomersData();
+  }, [loadCustomersData]);
+
+  useEffect(() => {
+    const sub1 = DeviceEventEmitter.addListener("SYNC_COMPLETED", () => {
+      void loadCustomersData();
+    });
+    const sub2 = DeviceEventEmitter.addListener("WORKSPACE_RESET", () => {
+      void loadCustomersData();
+    });
+    return () => {
+      sub1.remove();
+      sub2.remove();
+    };
   }, [loadCustomersData]);
 
   useFocusEffect(

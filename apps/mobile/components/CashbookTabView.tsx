@@ -77,10 +77,20 @@ export function CashbookTabView() {
   useFocusEffect(
     useCallback(() => {
       void loadDashboard();
-      const sub = DeviceEventEmitter.addListener("REFRESH_CASHBOOK", () => {
+      const sub1 = DeviceEventEmitter.addListener("REFRESH_CASHBOOK", () => {
         void loadDashboard();
       });
-      return () => sub.remove();
+      const sub2 = DeviceEventEmitter.addListener("SYNC_COMPLETED", () => {
+        void loadDashboard();
+      });
+      const sub3 = DeviceEventEmitter.addListener("WORKSPACE_RESET", () => {
+        void loadDashboard();
+      });
+      return () => {
+        sub1.remove();
+        sub2.remove();
+        sub3.remove();
+      };
     }, [loadDashboard]),
   );
 

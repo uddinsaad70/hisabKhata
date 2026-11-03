@@ -2,6 +2,7 @@
 import { type DatabaseAdapter } from "./adapter";
 import { type CurrencyCode } from "../utils/formatCurrency";
 import { generateId } from "../utils/uuid";
+import { SQLiteDatabase } from "expo-sqlite";
 
 export interface BusinessRow {
   id: string;
@@ -240,4 +241,98 @@ export async function updateBusinessProfile(
      WHERE id = ? AND is_deleted = 0;`,
     [trimmedName, validCurrency, now, businessId],
   );
+}
+
+/**
+ * CP26/CP27: Safely prepares the local SQLite workspace for the newly authenticated serverUserId:
+ * 1. Removes synced cached data belonging to any PREVIOUS different user on this phone so accounts never mix.
+ * 2. Claims any unowned Guest businesses (owner_user_id IS NULL) for the current user and marks them is_synced = 0.
+ * 3. Resets the pull cursor if switching between different user accounts on the same phone.
+ */
+export async function claimLocalBusinessesForUser(
+  db: DatabaseAdapter,
+  serverUserId: string,
+): Promise<number> {
+  const now = Date.now();
+  let claimedCount = 0;
+
+  await db.withTransactionAsync(async () => {
+    // Check if there are businesses belonging to a DIFFERENT previous user on this device
+    const otherUserBiz = await db.getFirstAsync<{ id: string }>(
+      `SELECT id FROM businesses WHERE owner_user_id IS NOT NULL AND owner_user_id != ? LIMIT 1;`,
+      [serverUserId],
+    );
+
+    if (otherUserBiz) {
+      // Remove synced records belonging to the previous user (foreign keys ON DELETE CASCADE cleans child rows)
+      await db.runAsync(
+        `DELETE FROM businesses WHERE owner_user_id IS NOT NULL AND owner_user_id != ? AND is_synced = 1;`,
+        [serverUserId],
+      );
+      // Reset pull cursor so this new user pulls their own full ledger from the server
+      await db.runAsync(
+        `UPDATE sync_state SET last_pulled_cursor = NULL, last_pushed_at = 0 WHERE business_id = 'GLOBAL';`,
+      );
+    }
+
+    // Claim any unowned Guest businesses (owner_user_id IS NULL) created while logged out
+    const res = await db.runAsync(
+      `UPDATE businesses
+       SET owner_user_id = ?,
+           is_synced = 0,
+           updated_at = ?
+       WHERE owner_user_id IS NULL;`,
+      [serverUserId, now],
+    );
+    claimedCount = res.changes;
+
+    if (claimedCount > 0) {
+      // Ensure child rows of newly claimed businesses are also marked unsynced
+      await db.runAsync(
+        `UPDATE customers SET is_synced = 0 WHERE business_id IN (SELECT id FROM businesses WHERE owner_user_id = ?);`,
+        [serverUserId],
+      );
+      await db.runAsync(
+        `UPDATE customer_entries SET is_synced = 0 WHERE business_id IN (SELECT id FROM businesses WHERE owner_user_id = ?);`,
+        [serverUserId],
+      );
+      await db.runAsync(
+        `UPDATE cashbook_entries SET is_synced = 0 WHERE business_id IN (SELECT id FROM businesses WHERE owner_user_id = ?);`,
+        [serverUserId],
+      );
+    }
+  });
+
+  return claimedCount;
+}
+
+/**
+ * Clears all cloud-owned user data from local SQLite immediately upon logout
+ * so the previous user's customers/entries are never left behind on screen.
+ * Creates a fresh Guest business (owner_user_id = NULL) if none exists.
+ */
+export async function clearLoggedInUserWorkspaceOnLogout(
+  db: DatabaseAdapter,
+  defaultBusinessName: string = "My Business",
+): Promise<BusinessRow> {
+  await db.withTransactionAsync(async () => {
+    // Delete all businesses that belonged to a logged-in account (ON DELETE CASCADE removes their customers & entries)
+    await db.runAsync(
+      `DELETE FROM businesses WHERE owner_user_id IS NOT NULL;`,
+    );
+    await db.runAsync(
+      `UPDATE sync_state SET last_pulled_cursor = NULL, last_pushed_at = 0 WHERE business_id = 'GLOBAL';`,
+    );
+  });
+
+  const remaining = await getAllBusinesses(db);
+  if (remaining.length > 0) {
+    return remaining[0];
+  }
+
+  return createBusiness(db, {
+    name: defaultBusinessName,
+    currency: "BDT",
+    ownerUserId: null,
+  });
 }

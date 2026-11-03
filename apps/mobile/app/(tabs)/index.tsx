@@ -1,6 +1,9 @@
 // apps/mobile/app/(tabs)/index.tsx
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
+  DeviceEventEmitter,
+  Image,
   Platform,
   Pressable,
   StatusBar as RNStatusBar,
@@ -9,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useUiStore } from "../../store/uiStore";
 import { getThemeColors } from "../../constants/theme";
@@ -20,6 +24,13 @@ import { getAllBusinesses } from "../../db/businessQueries";
 import { CustomersTabView } from "../../components/CustomersTabView";
 import { CashbookTabView } from "../../components/CashbookTabView";
 import { getStrings } from "../../constants/translations";
+import { UserAccountModal } from "../../components/UserAccountModal";
+import { syncNowWithCloud } from "../../db/syncService";
+import {
+  getCurrentUserProfile,
+  type UserProfile,
+} from "../../utils/userAuthService";
+import { getBusinessBackupStats } from "../../utils/backupService";
 
 export default function HomeScreen() {
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
@@ -38,6 +49,24 @@ export default function HomeScreen() {
 
   const [dbHealth, setDbHealth] = useState<DatabaseHealthSummary | null>(null);
   const [switcherVisible, setSwitcherVisible] = useState<boolean>(false);
+  const [accountModalVisible, setAccountModalVisible] =
+    useState<boolean>(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [unsyncedCount, setUnsyncedCount] = useState<number>(0);
+
+  const refreshHeaderSyncStatus = useCallback(async () => {
+    try {
+      const profile = await getCurrentUserProfile();
+      setUserProfile(profile);
+      if (activeBusinessId && Platform.OS !== "web") {
+        const db = getDbAdapter();
+        const stats = await getBusinessBackupStats(db, activeBusinessId);
+        setUnsyncedCount(stats.unsyncedCount);
+      }
+    } catch {
+      // Ignore before DB ready
+    }
+  }, [activeBusinessId]);
 
   useEffect(() => {
     initializeAppDatabase()
@@ -45,7 +74,7 @@ export default function HomeScreen() {
         setDbHealth(summary);
 
         if (!useUiStore.getState().activeBusinessId) {
-          const db = await getDbAdapter();
+          const db = getDbAdapter();
           const businesses = await getAllBusinesses(db);
           if (businesses.length > 0) {
             useUiStore
@@ -57,9 +86,90 @@ export default function HomeScreen() {
               );
           }
         }
+        await refreshHeaderSyncStatus();
       })
       .catch(() => setDbHealth(null));
-  }, []);
+  }, [refreshHeaderSyncStatus]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshHeaderSyncStatus();
+    }, [refreshHeaderSyncStatus]),
+  );
+
+  // Automatic debounced cloud sync (2 seconds after any customer or cashbook change!)
+  useEffect(() => {
+    let syncTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const triggerAutoSync = () => {
+      void refreshHeaderSyncStatus();
+      if (syncTimer) clearTimeout(syncTimer);
+      syncTimer = setTimeout(() => {
+        void syncNowWithCloud().then(() => refreshHeaderSyncStatus());
+      }, 2000);
+    };
+
+    const sub1 = DeviceEventEmitter.addListener(
+      "REFRESH_LEDGER",
+      triggerAutoSync,
+    );
+    const sub2 = DeviceEventEmitter.addListener(
+      "REFRESH_CASHBOOK",
+      triggerAutoSync,
+    );
+    const sub3 = DeviceEventEmitter.addListener("SYNC_COMPLETED", () => {
+      void refreshHeaderSyncStatus();
+    });
+
+    return () => {
+      if (syncTimer) clearTimeout(syncTimer);
+      sub1.remove();
+      sub2.remove();
+      sub3.remove();
+    };
+  }, [refreshHeaderSyncStatus]);
+
+  // Silent automatic debounced cloud sync (2 seconds after ANY local SQLite insert/update/delete)
+  useEffect(() => {
+    let syncTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const triggerAutoSync = () => {
+      void refreshHeaderSyncStatus();
+      if (syncTimer) clearTimeout(syncTimer);
+
+      syncTimer = setTimeout(async () => {
+        const profile = await getCurrentUserProfile();
+        if (!profile) {
+          return;
+        }
+        await syncNowWithCloud();
+        await refreshHeaderSyncStatus();
+      }, 2000);
+    };
+
+    const subMutated = DeviceEventEmitter.addListener(
+      "LOCAL_DATA_MUTATED",
+      triggerAutoSync,
+    );
+    const subSyncDone = DeviceEventEmitter.addListener("SYNC_COMPLETED", () => {
+      void refreshHeaderSyncStatus();
+    });
+    const subReset = DeviceEventEmitter.addListener("WORKSPACE_RESET", () => {
+      void refreshHeaderSyncStatus();
+    });
+
+    return () => {
+      if (syncTimer) clearTimeout(syncTimer);
+      subMutated.remove();
+      subSyncDone.remove();
+      subReset.remove();
+    };
+  }, [refreshHeaderSyncStatus]);
+
+  // Initial background cloud sync on app launch
+  useEffect(() => {
+    void syncNowWithCloud().then(() => refreshHeaderSyncStatus());
+  }, [refreshHeaderSyncStatus]);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.pageBackgroundGrey }]}>
@@ -96,15 +206,42 @@ export default function HomeScreen() {
             />
           </Pressable>
 
-          {/* Right: Cloud Sync Status Indicator */}
-          <View
+          {/* Right: User Profile Avatar & Cloud Sync Status Dot */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open account and cloud sync"
+            onPress={() => setAccountModalVisible(true)}
             style={[
-              styles.syncStatusPill,
+              styles.profileAvatarButton,
               { backgroundColor: colors.darkHeaderAccent },
             ]}
           >
-            <Ionicons name="cloud-done-outline" size={18} color="#FFFFFF" />
-          </View>
+            {userProfile?.avatarBase64 ? (
+              <Image
+                source={{ uri: userProfile.avatarBase64 }}
+                style={styles.headerAvatarImg}
+              />
+            ) : userProfile ? (
+              <Text style={styles.headerAvatarInitials}>
+                {userProfile.name.slice(0, 2).toUpperCase()}
+              </Text>
+            ) : (
+              <Ionicons name="person-outline" size={18} color="#FFFFFF" />
+            )}
+
+            <View
+              style={[
+                styles.syncStatusDot,
+                {
+                  backgroundColor: !userProfile
+                    ? "#9CA3AF"
+                    : unsyncedCount === 0
+                      ? "#22C55E"
+                      : "#F59E0B",
+                },
+              ]}
+            />
+          </Pressable>
         </View>
 
         {/* Header Tabs: CUSTOMERS | CASHBOOK */}
@@ -172,6 +309,14 @@ export default function HomeScreen() {
         visible={switcherVisible}
         onClose={() => setSwitcherVisible(false)}
       />
+      <UserAccountModal
+        visible={accountModalVisible}
+        onClose={() => setAccountModalVisible(false)}
+        onProfileChanged={(updatedProfile) => {
+          setUserProfile(updatedProfile);
+          void refreshHeaderSyncStatus();
+        }}
+      />
     </View>
   );
 }
@@ -217,6 +362,36 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
+  },
+  profileAvatarButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.35)",
+  },
+  headerAvatarImg: {
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+  },
+  headerAvatarInitials: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
+  },
+  syncStatusDot: {
+    position: "absolute",
+    bottom: -1,
+    right: -1,
+    width: 11,
+    height: 11,
+    borderRadius: 5.5,
+    borderWidth: 1.5,
+    borderColor: "#1355A3",
   },
   headerTabsRow: {
     flexDirection: "row",

@@ -28,6 +28,11 @@ import {
   View,
   ActivityIndicator,
 } from "react-native";
+import { UserAccountModal } from "../../components/UserAccountModal";
+import {
+  getCurrentUserProfile,
+  type UserProfile,
+} from "../../utils/userAuthService";
 import { Ionicons } from "@expo/vector-icons";
 import { useUiStore } from "../../store/uiStore";
 import { getThemeColors } from "../../constants/theme";
@@ -167,6 +172,8 @@ export default function MoreSettingsScreen() {
 
   // CP17: Local Backup & Restore States
   const [backupModalVisible, setBackupModalVisible] = useState(false);
+  const [accountModalVisible, setAccountModalVisible] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isBackupBusy, setIsBackupBusy] = useState(false);
   const [backupStats, setBackupStats] = useState<BackupStats>({
     totalCustomers: 0,
@@ -181,6 +188,8 @@ export default function MoreSettingsScreen() {
       const db = getDbAdapter();
       const stats = await getBusinessBackupStats(db, activeBusinessId);
       setBackupStats(stats);
+      const profile = await getCurrentUserProfile();
+      setUserProfile(profile);
     } catch {
       // Ignore stats error before DB is ready
     }
@@ -501,6 +510,54 @@ export default function MoreSettingsScreen() {
                   ? `${t.allBackedUpPrefix} (${backupStats.totalCustomers} ${t.customersWord} • ${backupStats.totalCustomerEntries + backupStats.totalCashbookEntries} ${t.entriesWord})`
                   : `${backupStats.unsyncedCount} ${t.unsyncedChangesSuffix}`}
               </Text>
+              <View
+                style={[
+                  styles.divider,
+                  { backgroundColor: colors.borderDivider },
+                ]}
+              />
+
+              {/* CP26: Cloud Sync & Account Login */}
+              <Pressable
+                onPress={() => setAccountModalVisible(true)}
+                style={styles.settingItemRow}
+              >
+                <Ionicons
+                  name="person-circle-outline"
+                  size={22}
+                  color={colors.primaryBlue}
+                  style={styles.rowIcon}
+                />
+                <View style={styles.textColumn}>
+                  <Text
+                    style={[
+                      styles.settingTitle,
+                      { color: colors.primaryTextDark },
+                    ]}
+                  >
+                    {t.accountAndSyncTitle}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.settingDescription,
+                      {
+                        color: userProfile
+                          ? colors.primaryGreen
+                          : colors.secondaryMutedText,
+                      },
+                    ]}
+                  >
+                    {userProfile
+                      ? `${userProfile.name} (${userProfile.email})`
+                      : t.accountAndSyncDescGuest}
+                  </Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={colors.secondaryMutedText}
+                />
+              </Pressable>
             </View>
             <Ionicons
               name="chevron-forward"
@@ -925,6 +982,14 @@ export default function MoreSettingsScreen() {
           </View>
         </View>
       </Modal>
+      <UserAccountModal
+        visible={accountModalVisible}
+        onClose={() => setAccountModalVisible(false)}
+        onProfileChanged={(updated) => {
+          setUserProfile(updated);
+          void loadBackupStats();
+        }}
+      />
     </View>
   );
 }

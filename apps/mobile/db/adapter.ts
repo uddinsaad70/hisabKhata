@@ -1,5 +1,6 @@
 // apps/mobile/db/adapter.ts
 import type { SQLiteDatabase } from "expo-sqlite";
+import { DeviceEventEmitter } from "react-native";
 
 /**
  * Allowed primitive parameter types for parameterized SQL queries.
@@ -19,35 +20,16 @@ export interface RunResult {
  * and automated tests (better-sqlite3 in-memory in Node/Jest).
  */
 export interface DatabaseAdapter {
-  /**
-   * Executes a SELECT query and returns all matching rows.
-   */
   getAllAsync<T>(sql: string, params?: SqlBindParam[]): Promise<T[]>;
-
-  /**
-   * Executes a SELECT query and returns the first matching row or null.
-   */
   getFirstAsync<T>(sql: string, params?: SqlBindParam[]): Promise<T | null>;
-
-  /**
-   * Executes a mutating parameterized SQL statement (INSERT, UPDATE, DELETE).
-   */
   runAsync(sql: string, params?: SqlBindParam[]): Promise<RunResult>;
-
-  /**
-   * Executes one or more raw SQL statements (DDL migrations, PRAGMAs).
-   */
   execAsync(sql: string): Promise<void>;
-
-  /**
-   * Runs the provided async callback inside an atomic SQLite transaction.
-   * Commits on resolution and rolls back automatically if an error is thrown.
-   */
   withTransactionAsync<T>(task: () => Promise<T>): Promise<T>;
 }
 
 /**
  * Wraps an Expo SQLiteDatabase instance into the standard DatabaseAdapter interface.
+ * Automatically emits "LOCAL_DATA_MUTATED" whenever unsynced business/customer/entry data is written.
  */
 export function createExpoSqliteAdapter(db: SQLiteDatabase): DatabaseAdapter {
   let transactionDepth = 0;
@@ -73,6 +55,18 @@ export function createExpoSqliteAdapter(db: SQLiteDatabase): DatabaseAdapter {
       params: SqlBindParam[] = [],
     ): Promise<RunResult> {
       const result = await db.runAsync(sql, params);
+
+      // Whenever a local mutation marks a record unsynced (is_synced = 0), notify the 2-second auto-sync watcher
+      if (
+        result.changes > 0 &&
+        /INSERT INTO|UPDATE/i.test(sql) &&
+        !sql.includes("sync_state") &&
+        !sql.includes("SET is_synced = 1") &&
+        !sql.includes("SET net_balance =")
+      ) {
+        DeviceEventEmitter.emit("LOCAL_DATA_MUTATED");
+      }
+
       return {
         changes: result.changes,
         lastInsertRowId: Number(result.lastInsertRowId),
