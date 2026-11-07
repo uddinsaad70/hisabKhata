@@ -18,15 +18,25 @@ const REFRESH_TOKEN_KEY = "hk_refresh_token_v1";
 const DEVICE_ID_KEY = "hk_device_id_v1";
 const USER_PROFILE_CACHE_KEY = "hk_user_profile_cache_v1";
 
-/**
- * Returns the backend API base URL configured in apps/mobile/.env.
- */
 export function getApiBaseUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
   if (envUrl && envUrl.trim().length > 0) {
     return envUrl.trim().replace(/\/+$/, "");
   }
   return "http://localhost:4000";
+}
+
+/**
+ * Builds a Google OAuth-compatible web redirect bridge URL from getApiBaseUrl().
+ * Automatically appends .nip.io for local LAN IPs or uses the production domain directly.
+ */
+export function getGoogleOAuthBridgeUrl(): string {
+  const base = getApiBaseUrl();
+  const ipv4Processed = base.replace(
+    /^(https?:\/\/)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?$/i,
+    "$1$2.nip.io$3",
+  );
+  return `${ipv4Processed}/auth/google/bridge`;
 }
 
 /**
@@ -291,51 +301,35 @@ export async function logoutUserAccount(): Promise<void> {
   await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
   await SecureStore.deleteItemAsync(USER_PROFILE_CACHE_KEY);
 }
+
 /**
- * Authenticates or registers a user in 1 tap via POST /auth/google on the backend.
+ * Authenticates or registers a user via real Google OAuth token (POST /auth/google).
  */
-export async function loginWithGoogleAccount(params: {
-  email: string;
-  name: string;
-  googleSub?: string;
-}): Promise<UserProfile> {
+export async function loginWithGoogleToken(
+  googleToken: string,
+): Promise<UserProfile> {
   const deviceId = await getOrCreateDeviceId();
   const baseUrl = getApiBaseUrl();
 
-  // Calls POST /auth/register or /auth/login seamlessly for 1-tap Google account on Expo Go,
-  // or POST /auth/google when a real Google ID token is provided.
-  const deterministicGooglePass = `google_oauth_${params.email.trim().toLowerCase()}`;
+  // Clean up any legacy dummy account cache from SecureStore
+  if (Platform.OS !== "web") {
+    await SecureStore.deleteItemAsync("hk_known_google_accounts_v1");
+  }
 
-  let res = await fetch(`${baseUrl}/auth/login`, {
+  const res = await fetch(`${baseUrl}/auth/google`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      email: params.email.trim().toLowerCase(),
-      password: deterministicGooglePass,
+      idToken: googleToken,
       deviceId,
       deviceName: `${Platform.OS.toUpperCase()} Device`,
       platform: Platform.OS === "ios" ? "ios" : "android",
     }),
   });
 
-  if (res.status === 401) {
-    res = await fetch(`${baseUrl}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: params.name.trim(),
-        email: params.email.trim().toLowerCase(),
-        password: deterministicGooglePass,
-        deviceId,
-        deviceName: `${Platform.OS.toUpperCase()} Device`,
-        platform: Platform.OS === "ios" ? "ios" : "android",
-      }),
-    });
-  }
-
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.message || "Google sign-in failed.");
+    throw new Error(data.message || "Google authentication failed.");
   }
 
   const profile: UserProfile = {

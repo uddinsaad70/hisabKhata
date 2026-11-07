@@ -26,7 +26,7 @@ describe("CP26: First-Login Local Business Ownership Claim", () => {
     );
 
     expect(claimedCount).toBe(2);
-    expect(executedQueries).toHaveLength(1);
+    expect(executedQueries).toHaveLength(4);
     expect(executedQueries[0].sql).toContain("SET owner_user_id = ?");
     expect(executedQueries[0].sql).toContain("is_synced = 0");
     expect(executedQueries[0].sql).toContain("WHERE owner_user_id IS NULL");

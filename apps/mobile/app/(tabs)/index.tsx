@@ -52,6 +52,7 @@ export default function HomeScreen() {
   const [accountModalVisible, setAccountModalVisible] =
     useState<boolean>(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState<boolean>(false);
   const [unsyncedCount, setUnsyncedCount] = useState<number>(0);
 
   const refreshHeaderSyncStatus = useCallback(async () => {
@@ -299,6 +300,60 @@ export default function HomeScreen() {
 
       {/* Main Content Area */}
       <View style={styles.contentContainer}>
+        {/* CP28: Guest Cloud Backup Suggestion Banner */}
+        {!userProfile && unsyncedCount > 0 && !bannerDismissed && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setAccountModalVisible(true)}
+            style={[
+              styles.guestBackupBanner,
+              {
+                backgroundColor: colors.cardSurface,
+                borderColor: "#F59E0B",
+              },
+            ]}
+          >
+            <View style={styles.guestBannerIconWrap}>
+              <Ionicons
+                name="cloud-offline-outline"
+                size={20}
+                color="#D97706"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={[
+                  styles.guestBannerTitle,
+                  { color: colors.primaryTextDark },
+                ]}
+              >
+                {t.guestBackupBannerTitle} ({unsyncedCount})
+              </Text>
+              <Text
+                style={[
+                  styles.guestBannerSub,
+                  { color: colors.secondaryMutedText },
+                ]}
+              >
+                {t.guestBackupBannerSub}
+              </Text>
+            </View>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                setBannerDismissed(true);
+              }}
+              hitSlop={10}
+              style={{ padding: 4 }}
+            >
+              <Ionicons
+                name="close"
+                size={18}
+                color={colors.secondaryMutedText}
+              />
+            </Pressable>
+          </Pressable>
+        )}
         {activeHomeTab === "customers" ? (
           <CustomersTabView />
         ) : (
@@ -486,5 +541,32 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontFamily: "Inter_700Bold",
     fontSize: 19,
+  },
+  guestBackupBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+    gap: 10,
+  },
+  guestBannerIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#FEF3C7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  guestBannerTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
+  },
+  guestBannerSub: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    marginTop: 1,
   },
 });

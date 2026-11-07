@@ -208,6 +208,9 @@ export const TRANSLATIONS = {
     syncingBtn: "SYNCING...",
     logoutBtn: "LOGOUT",
     continueWithGoogleBtn: "Continue with Google (1-Tap)",
+
+    guestBackupBannerTitle: "Cloud backup is off",
+    guestBackupBannerSub: "Tap here to sign in & keep your ledger safe online",
   },
   bn: {
     // 1. Bottom Tab & Top Header Navigation
@@ -415,6 +418,9 @@ export const TRANSLATIONS = {
     syncingBtn: "সিঙ্ক হচ্ছে...",
     logoutBtn: "লগআউট করুন",
     continueWithGoogleBtn: "গুগল দিয়ে ১-ট্যাপে লগইন করুন",
+
+    guestBackupBannerTitle: "ক্লাউড ব্যাকআপ চালু নেই",
+    guestBackupBannerSub: "ফোন হারালে হিসাব নিরাপদ রাখতে ট্যাপ করে লগইন করুন",
   },
 } as const;
 

@@ -106,14 +106,6 @@ async function issueSessionTokens(params: {
 }): Promise<AuthResponsePayload> {
   const { user, deviceId, deviceName, platform } = params;
 
-  // Equivalent Raw SQL:
-  // INSERT INTO devices (device_id, user_id, device_name, platform, last_seen_at)
-  // VALUES ($1, $2, $3, $4, clock_timestamp())
-  // ON CONFLICT (device_id) DO UPDATE
-  // SET user_id = EXCLUDED.user_id,
-  //     device_name = COALESCE(EXCLUDED.device_name, devices.device_name),
-  //     platform = COALESCE(EXCLUDED.platform, devices.platform),
-  //     last_seen_at = clock_timestamp();
   await prisma.device.upsert({
     where: { deviceId },
     update: {
@@ -135,9 +127,6 @@ async function issueSessionTokens(params: {
   const tokenHash = hashRefreshToken(rawRefreshToken);
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
-  // Equivalent Raw SQL:
-  // INSERT INTO refresh_tokens (id, user_id, device_id, token_hash, expires_at)
-  // VALUES (gen_random_uuid(), $1, $2, $3, $4);
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
@@ -167,8 +156,6 @@ async function issueSessionTokens(params: {
 export async function registerUser(
   input: RegisterInput,
 ): Promise<AuthResponsePayload> {
-  // Equivalent Raw SQL:
-  // SELECT id FROM users WHERE email = $1 LIMIT 1;
   const existing = await prisma.user.findUnique({
     where: { email: input.email },
   });
@@ -183,9 +170,6 @@ export async function registerUser(
 
   const passwordHash = await argon2.hash(input.password);
 
-  // Equivalent Raw SQL:
-  // INSERT INTO users (id, email, name, password_hash, avatar_base64)
-  // VALUES (gen_random_uuid(), $1, $2, $3, $4) RETURNING *;
   const user = await prisma.user.create({
     data: {
       email: input.email,
@@ -209,8 +193,6 @@ export async function registerUser(
 export async function loginUser(
   input: LoginInput,
 ): Promise<AuthResponsePayload> {
-  // Equivalent Raw SQL:
-  // SELECT * FROM users WHERE email = $1 LIMIT 1;
   const user = await prisma.user.findUnique({
     where: { email: input.email },
   });
@@ -241,38 +223,76 @@ export async function loginUser(
 }
 
 /**
- * 3. Authenticate or Register via Google ID Token.
+ * 3. Authenticate with Google OAuth (supports injected test verifier, ID Token, and Access Token).
  */
 export async function authenticateWithGoogle(
   input: GoogleAuthInput,
 ): Promise<AuthResponsePayload> {
-  const googleProfile = await googleVerifier(input.idToken);
+  let payload: GoogleTokenPayload;
 
-  // Equivalent Raw SQL:
-  // SELECT * FROM users WHERE google_sub = $1 OR email = $2 LIMIT 1;
+  try {
+    payload = await googleVerifier(input.idToken);
+  } catch {
+    // Fallback for OAuth2 access_token returned by expo-auth-session popup
+    const userInfoRes = await fetch(
+      "https://www.googleapis.com/oauth2/v3/userinfo",
+      {
+        headers: { Authorization: `Bearer ${input.idToken}` },
+      },
+    );
+
+    if (!userInfoRes.ok) {
+      throw new AuthError(
+        401,
+        "INVALID_GOOGLE_TOKEN",
+        "Google token verification failed.",
+      );
+    }
+
+    const raw = (await userInfoRes.json()) as {
+      sub?: string;
+      email?: string;
+      name?: string;
+      picture?: string;
+    };
+
+    if (!raw.sub || !raw.email) {
+      throw new AuthError(
+        401,
+        "INVALID_GOOGLE_PAYLOAD",
+        "Google token did not return a valid email or subject.",
+      );
+    }
+
+    payload = {
+      sub: raw.sub,
+      email: raw.email.toLowerCase().trim(),
+      name: raw.name,
+      picture: raw.picture,
+    };
+  }
+
+  const normalizedEmail = payload.email.toLowerCase().trim();
+  const displayName = payload.name?.trim() || normalizedEmail.split("@")[0];
+
   let user = await prisma.user.findFirst({
     where: {
-      OR: [{ googleSub: googleProfile.sub }, { email: googleProfile.email }],
+      OR: [{ googleSub: payload.sub }, { email: normalizedEmail }],
     },
   });
 
   if (!user) {
-    // Equivalent Raw SQL:
-    // INSERT INTO users (id, email, name, google_sub) VALUES (gen_random_uuid(), $1, $2, $3) RETURNING *;
     user = await prisma.user.create({
       data: {
-        email: googleProfile.email,
-        name: googleProfile.name || googleProfile.email.split("@")[0],
-        googleSub: googleProfile.sub,
+        email: normalizedEmail,
+        name: displayName,
+        googleSub: payload.sub,
       },
     });
   } else if (!user.googleSub) {
-    // Link google_sub to existing email account
-    // Equivalent Raw SQL:
-    // UPDATE users SET google_sub = $1, updated_at = clock_timestamp() WHERE id = $2 RETURNING *;
     user = await prisma.user.update({
       where: { id: user.id },
-      data: { googleSub: googleProfile.sub },
+      data: { googleSub: payload.sub },
     });
   }
 
@@ -292,10 +312,6 @@ export async function rotateRefreshToken(
 ): Promise<AuthResponsePayload> {
   const tokenHash = hashRefreshToken(input.refreshToken);
 
-  // Equivalent Raw SQL:
-  // SELECT rt.*, u.* FROM refresh_tokens rt
-  // JOIN users u ON u.id = rt.user_id
-  // WHERE rt.token_hash = $1 LIMIT 1;
   const storedToken = await prisma.refreshToken.findUnique({
     where: { tokenHash },
     include: { user: true },
@@ -314,9 +330,6 @@ export async function rotateRefreshToken(
     );
   }
 
-  // Revoke the used refresh token immediately (Refresh Token Rotation)
-  // Equivalent Raw SQL:
-  // UPDATE refresh_tokens SET revoked_at = clock_timestamp() WHERE id = $1 AND revoked_at IS NULL;
   const revokeResult = await prisma.refreshToken.updateMany({
     where: { id: storedToken.id, revokedAt: null },
     data: { revokedAt: new Date() },
@@ -343,9 +356,6 @@ export async function updateUserProfile(
   userId: string,
   input: UpdateProfileInput,
 ) {
-  // Equivalent Raw SQL:
-  // UPDATE users SET name = COALESCE($1, name), avatar_base64 = $2, updated_at = clock_timestamp()
-  // WHERE id = $3 RETURNING id, email, name, avatar_base64;
   const updated = await prisma.user.update({
     where: { id: userId },
     data: {
@@ -362,4 +372,16 @@ export async function updateUserProfile(
     name: updated.name,
     avatarBase64: updated.avatarBase64,
   };
+}
+
+/**
+ * Permanently deletes a user account and all associated businesses, customers,
+ * entries, devices, and refresh tokens via PostgreSQL ON DELETE CASCADE (CP28).
+ */
+export async function deleteUserAccountPermanently(
+  userId: string,
+): Promise<void> {
+  await prisma.user.delete({
+    where: { id: userId },
+  });
 }

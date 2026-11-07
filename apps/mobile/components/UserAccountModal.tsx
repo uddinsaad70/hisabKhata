@@ -1,5 +1,5 @@
 // apps/mobile/components/UserAccountModal.tsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   View,
@@ -18,12 +18,17 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as SecureStore from "expo-secure-store";
+import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
 import { getStrings } from "../constants/translations";
 import {
+  getApiBaseUrl,
   getCurrentUserProfile,
+  getGoogleOAuthBridgeUrl,
   loginUserAccount,
+  loginWithGoogleToken,
   logoutUserAccount,
   registerUserAccount,
   updateActiveUserProfile,
@@ -37,18 +42,13 @@ import {
   clearLoggedInUserWorkspaceOnLogout,
 } from "../db/businessQueries";
 
+WebBrowser.maybeCompleteAuthSession();
+
 export interface UserAccountModalProps {
   visible: boolean;
   onClose: () => void;
   onProfileChanged: (user: UserProfile | null) => void;
 }
-
-interface SavedGoogleAccountOption {
-  name: string;
-  email: string;
-}
-
-const KNOWN_GOOGLE_ACCOUNTS_KEY = "hk_known_google_accounts_v1";
 
 export function UserAccountModal({
   visible,
@@ -74,46 +74,17 @@ export function UserAccountModal({
   const [isSyncing, setIsSyncing] = useState(false);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
 
-  // Saved accounts on this device (no hardcoded dummy emails)
-  const [googlePickerVisible, setGooglePickerVisible] = useState(false);
-  const [knownGoogleAccounts, setKnownGoogleAccounts] = useState<
-    SavedGoogleAccountOption[]
-  >([]);
-  const passwordInputRef = useRef<any>(null);
-
-  const loadKnownGoogleAccounts = async () => {
-    if (Platform.OS === "web") return;
-    try {
-      const raw = await SecureStore.getItemAsync(KNOWN_GOOGLE_ACCOUNTS_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as SavedGoogleAccountOption[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setKnownGoogleAccounts(parsed);
-        }
-      }
-    } catch {
-      // Ignore
-    }
-  };
-
-  const rememberGoogleAccount = async (acct: SavedGoogleAccountOption) => {
-    if (Platform.OS === "web" || !acct.email.includes("@")) return;
-    try {
-      const filtered = knownGoogleAccounts.filter(
-        (a) => a.email.toLowerCase() !== acct.email.toLowerCase(),
-      );
-      const next = [acct, ...filtered].slice(0, 5);
-      setKnownGoogleAccounts(next);
-      await SecureStore.setItemAsync(
-        KNOWN_GOOGLE_ACCOUNTS_KEY,
-        JSON.stringify(next),
-      );
-    } catch {
-      // Ignore
-    }
-  };
+  const googleClientId = (
+    process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || ""
+  ).trim();
 
   const refreshState = async () => {
+    if (Platform.OS !== "web") {
+      await SecureStore.deleteItemAsync("hk_known_google_accounts_v1").catch(
+        () => {},
+      );
+    }
+
     const profile = await getCurrentUserProfile();
     setUser(profile);
     if (activeBusinessId && Platform.OS !== "web") {
@@ -130,10 +101,139 @@ export function UserAccountModal({
   useEffect(() => {
     if (visible) {
       void refreshState();
-      void loadKnownGoogleAccounts();
-      setGooglePickerVisible(false);
     }
   }, [visible, activeBusinessId]);
+
+  /**
+   * Opens Google's official OAuth account chooser using our nip.io web bridge.
+   * Simultaneously polls /auth/google/bridge-poll so the moment the user taps their Gmail,
+   * the browser closes automatically (or on button tap) and logs in immediately!
+   */
+  const handleGooglePopupPress = async () => {
+    if (isBusy) return;
+
+    if (!googleClientId) {
+      Alert.alert(
+        language === "bn"
+          ? "Google Client ID প্রয়োজন"
+          : "Google Client ID Required",
+        language === "bn"
+          ? "আসল Google OAuth পপআপ চালু করতে apps/mobile/.env ফাইলে আপনার EXPO_PUBLIC_GOOGLE_CLIENT_ID দিন।"
+          : "Please set EXPO_PUBLIC_GOOGLE_CLIENT_ID in apps/mobile/.env to launch the official Google OAuth popup.",
+      );
+      return;
+    }
+
+    setIsBusy(true);
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let resolvedToken: string | null = null;
+
+    try {
+      const sessionId = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      const appReturnUrl = Linking.createURL("google-auth");
+      const webRedirectUri = getGoogleOAuthBridgeUrl();
+      const baseUrl = getApiBaseUrl();
+
+      const authParams = new URLSearchParams({
+        client_id: googleClientId,
+        redirect_uri: webRedirectUri,
+        response_type: "token",
+        scope: "openid email profile",
+        prompt: "select_account",
+        state: `${sessionId}|${appReturnUrl}`,
+      });
+
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${authParams.toString()}`;
+
+      // Start background polling so as soon as the bridge receives the token, we grab it and dismiss the browser!
+      pollInterval = setInterval(async () => {
+        try {
+          const pollRes = await fetch(
+            `${baseUrl}/auth/google/bridge-poll?sessionId=${encodeURIComponent(sessionId)}`,
+          );
+          if (pollRes.ok) {
+            const data = await pollRes.json();
+            if (data.ready && data.token) {
+              resolvedToken = data.token;
+              if (pollInterval) clearInterval(pollInterval);
+              WebBrowser.dismissBrowser();
+            }
+          }
+        } catch {
+          // Ignore transient poll errors while user is in browser
+        }
+      }, 1000);
+
+      const result = await WebBrowser.openAuthSessionAsync(
+        googleAuthUrl,
+        appReturnUrl,
+      );
+
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+
+      if (!resolvedToken && result.type === "success" && result.url) {
+        const parsed = new URL(result.url);
+        const hashParams = new URLSearchParams(
+          parsed.hash ? parsed.hash.slice(1) : "",
+        );
+        resolvedToken =
+          parsed.searchParams.get("google_token") ||
+          parsed.searchParams.get("access_token") ||
+          hashParams.get("access_token") ||
+          hashParams.get("id_token");
+      }
+
+      // Final check against backend store in case user manually closed the browser tab with 'X' after clicking Continue
+      if (!resolvedToken) {
+        try {
+          const finalPoll = await fetch(
+            `${baseUrl}/auth/google/bridge-poll?sessionId=${encodeURIComponent(sessionId)}`,
+          );
+          if (finalPoll.ok) {
+            const data = await finalPoll.json();
+            if (data.ready && data.token) {
+              resolvedToken = data.token;
+            }
+          }
+        } catch {
+          // Ignore
+        }
+      }
+
+      if (resolvedToken) {
+        const profile = await loginWithGoogleToken(resolvedToken);
+        setUser(profile);
+        await syncNowWithCloud();
+
+        if (Platform.OS !== "web") {
+          const db = getDbAdapter();
+          const businesses = await getAllBusinesses(db);
+          if (businesses.length > 0) {
+            setActiveBusiness(
+              businesses[0].id,
+              businesses[0].name,
+              businesses[0].currency,
+            );
+          }
+        }
+
+        DeviceEventEmitter.emit("WORKSPACE_RESET");
+        onProfileChanged(profile);
+        await refreshState();
+      }
+    } catch (err: any) {
+      Alert.alert(
+        "Google Sign-In Error",
+        err.message || "Could not complete Google sign-in.",
+      );
+    } finally {
+      if (pollInterval) clearInterval(pollInterval);
+      setIsBusy(false);
+    }
+  };
 
   const handlePickPhoto = async (forLoggedInUser: boolean) => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -203,18 +303,12 @@ export function UserAccountModal({
         });
       }
 
-      await rememberGoogleAccount({
-        name: profile.name,
-        email: profile.email,
-      });
-
       setUser(profile);
       setName("");
       setIdentifier("");
       setPassword("");
       setDraftAvatarBase64(null);
 
-      // Run cloud sync (Push local data + Pull cloud data) upon login/register
       await syncNowWithCloud();
 
       if (Platform.OS !== "web") {
@@ -239,19 +333,6 @@ export function UserAccountModal({
     }
   };
 
-  /**
-   * When user clicks a Google account from the picker, auto-fill Name & Email
-   * into the form and focus the Password input so user sets their own password!
-   */
-  const handleSelectGoogleAccountToFill = (acct: SavedGoogleAccountOption) => {
-    setName(acct.name);
-    setIdentifier(acct.email);
-    setGooglePickerVisible(false);
-    setTimeout(() => {
-      passwordInputRef.current?.focus();
-    }, 150);
-  };
-
   const handleSyncNow = async () => {
     if (isSyncing) return;
     setIsSyncing(true);
@@ -268,19 +349,12 @@ export function UserAccountModal({
     }
   };
 
-  /**
-   * Instant Logout (0ms lag):
-   * Immediately clears session tokens and wipes the logged-in user's cached records
-   * from local SQLite so the previous user's data never stays behind.
-   */
   const handleLogout = async () => {
     if (isBusy) return;
     setIsBusy(true);
     try {
-      // 1. Immediately clear tokens from SecureStore
       await logoutUserAccount();
 
-      // 2. Immediately clear logged-in user's businesses/customers/entries from local SQLite
       if (Platform.OS !== "web") {
         const db = getDbAdapter();
         const freshGuestBiz = await clearLoggedInUserWorkspaceOnLogout(
@@ -548,101 +622,6 @@ export function UserAccountModal({
                   })}
                 </View>
 
-                {/* Google Account Quick-Fill Button & Expandable Account List */}
-                <Pressable
-                  onPress={() => setGooglePickerVisible((prev) => !prev)}
-                  style={[
-                    styles.logoutBtn,
-                    {
-                      borderColor: colors.borderDivider,
-                      marginBottom: 14,
-                      backgroundColor: colors.pageBackgroundGrey,
-                    },
-                  ]}
-                >
-                  <Ionicons name="logo-google" size={18} color="#EA4335" />
-                  <Text
-                    style={[
-                      styles.logoutBtnText,
-                      { color: colors.primaryTextDark },
-                    ]}
-                  >
-                    {t.continueWithGoogleBtn}
-                  </Text>
-                  <Ionicons
-                    name={googlePickerVisible ? "chevron-up" : "chevron-down"}
-                    size={16}
-                    color={colors.secondaryMutedText}
-                  />
-                </Pressable>
-
-                {googlePickerVisible && (
-                  <View
-                    style={[
-                      styles.googleAccountListBox,
-                      {
-                        backgroundColor: colors.pageBackgroundGrey,
-                        borderColor: colors.borderDivider,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.googlePickerTitle,
-                        { color: colors.secondaryMutedText },
-                      ]}
-                    >
-                      {language === "bn"
-                        ? "অ্যাকাউন্ট সিলেক্ট করুন (নাম ও ইমেইল অটো বসবে):"
-                        : "Select an account to auto-fill Name & Email:"}
-                    </Text>
-                    {knownGoogleAccounts.map((acct) => (
-                      <Pressable
-                        key={acct.email}
-                        onPress={() => handleSelectGoogleAccountToFill(acct)}
-                        style={[
-                          styles.googleAccountItem,
-                          { borderBottomColor: colors.borderDivider },
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.googleMiniAvatar,
-                            { backgroundColor: colors.primaryBlue },
-                          ]}
-                        >
-                          <Text style={styles.googleMiniAvatarText}>
-                            {acct.name.charAt(0).toUpperCase()}
-                          </Text>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text
-                            style={[
-                              styles.googleAcctName,
-                              { color: colors.primaryTextDark },
-                            ]}
-                          >
-                            {acct.name}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.googleAcctEmail,
-                              { color: colors.secondaryMutedText },
-                            ]}
-                          >
-                            {acct.email}
-                          </Text>
-                        </View>
-                        <Ionicons
-                          name="checkmark-circle-outline"
-                          size={18}
-                          color={colors.primaryBlue}
-                        />
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
-
                 {authTab === "REGISTER" && (
                   <>
                     <Pressable
@@ -694,6 +673,8 @@ export function UserAccountModal({
                       onChangeText={setName}
                       placeholder={t.fullNamePlaceholder}
                       placeholderTextColor={colors.secondaryMutedText}
+                      autoComplete="name"
+                      textContentType="name"
                       style={[
                         styles.input,
                         {
@@ -720,6 +701,8 @@ export function UserAccountModal({
                   placeholderTextColor={colors.secondaryMutedText}
                   autoCapitalize="none"
                   keyboardType="email-address"
+                  autoComplete="email"
+                  textContentType="emailAddress"
                   style={[
                     styles.input,
                     {
@@ -738,12 +721,17 @@ export function UserAccountModal({
                   {t.passwordLabel}
                 </Text>
                 <TextInput
-                  ref={passwordInputRef}
                   value={password}
                   onChangeText={setPassword}
                   placeholder={t.passwordPlaceholder}
                   placeholderTextColor={colors.secondaryMutedText}
                   secureTextEntry
+                  autoComplete={
+                    authTab === "REGISTER" ? "new-password" : "current-password"
+                  }
+                  textContentType={
+                    authTab === "REGISTER" ? "newPassword" : "password"
+                  }
                   style={[
                     styles.input,
                     {
@@ -768,6 +756,30 @@ export function UserAccountModal({
                       {authTab === "LOGIN" ? t.loginBtn : t.createAccountBtn}
                     </Text>
                   )}
+                </Pressable>
+
+                {/* Official Google OAuth Popup Button */}
+                <Pressable
+                  onPress={() => void handleGooglePopupPress()}
+                  disabled={isBusy}
+                  style={[
+                    styles.logoutBtn,
+                    {
+                      borderColor: colors.borderDivider,
+                      marginTop: 12,
+                      backgroundColor: colors.pageBackgroundGrey,
+                    },
+                  ]}
+                >
+                  <Ionicons name="logo-google" size={18} color="#EA4335" />
+                  <Text
+                    style={[
+                      styles.logoutBtnText,
+                      { color: colors.primaryTextDark },
+                    ]}
+                  >
+                    {t.continueWithGoogleBtn}
+                  </Text>
                 </Pressable>
               </View>
             )}
@@ -896,44 +908,6 @@ const styles = StyleSheet.create({
   tabOptionText: {
     fontFamily: "Inter_700Bold",
     fontSize: 12,
-  },
-  googleAccountListBox: {
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 14,
-  },
-  googlePickerTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-    marginBottom: 8,
-  },
-  googleAccountItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 10,
-  },
-  googleMiniAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  googleMiniAvatarText: {
-    color: "#FFFFFF",
-    fontFamily: "Inter_700Bold",
-    fontSize: 14,
-  },
-  googleAcctName: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-  },
-  googleAcctEmail: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
   },
   fieldLabel: {
     fontFamily: "Inter_600SemiBold",
