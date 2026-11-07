@@ -211,6 +211,14 @@ export const TRANSLATIONS = {
 
     guestBackupBannerTitle: "Cloud backup is off",
     guestBackupBannerSub: "Tap here to sign in & keep your ledger safe online",
+
+    deleteAccountBtn: "Delete Account Permanently",
+    deleteAccountConfirmTitle: "Delete Account Permanently?",
+    deleteAccountConfirmMsg:
+      "This will permanently erase your account and all cloud-synced businesses, customers, and transactions. This action cannot be undone.",
+    deleteForeverBtn: "Delete Forever",
+    accountDeletedMsg:
+      "Your account and cloud data have been permanently deleted.",
   },
   bn: {
     // 1. Bottom Tab & Top Header Navigation
@@ -421,6 +429,13 @@ export const TRANSLATIONS = {
 
     guestBackupBannerTitle: "ক্লাউড ব্যাকআপ চালু নেই",
     guestBackupBannerSub: "ফোন হারালে হিসাব নিরাপদ রাখতে ট্যাপ করে লগইন করুন",
+    deleteAccountBtn: "অ্যাকাউন্ট স্থায়ীভাবে ডিলিট করুন",
+    deleteAccountConfirmTitle: "অ্যাকাউন্ট স্থায়ীভাবে মুছে ফেলবেন?",
+    deleteAccountConfirmMsg:
+      "এতে আপনার অ্যাকাউন্ট এবং ক্লাউডে সংরক্ষিত সমস্ত ব্যবসা, কাস্টমার ও লেনদেনের হিসাব চিরতরে মুছে যাবে। এটি আর ফিরিয়ে আনা যাবে না।",
+    deleteForeverBtn: "স্থায়ীভাবে মুছুন",
+    accountDeletedMsg:
+      "আপনার অ্যাকাউন্ট এবং ক্লাউড ডেটা স্থায়ীভাবে মুছে ফেলা হয়েছে।",
   },
 } as const;
 

@@ -24,6 +24,7 @@ import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
 import { getStrings } from "../constants/translations";
 import {
+  deleteCurrentUserAccount,
   getApiBaseUrl,
   getCurrentUserProfile,
   getGoogleOAuthBridgeUrl,
@@ -377,6 +378,49 @@ export function UserAccountModal({
     }
   };
 
+  const handleDeleteAccount = () => {
+    if (isBusy) return;
+    Alert.alert(t.deleteAccountConfirmTitle, t.deleteAccountConfirmMsg, [
+      {
+        text: t.cancelBtn,
+        style: "cancel",
+      },
+      {
+        text: t.deleteForeverBtn,
+        style: "destructive",
+        onPress: async () => {
+          setIsBusy(true);
+          try {
+            await deleteCurrentUserAccount();
+
+            if (Platform.OS !== "web") {
+              const db = getDbAdapter();
+              const freshGuestBiz = await clearLoggedInUserWorkspaceOnLogout(
+                db,
+                language === "bn" ? "আমার ব্যবসা" : "My Business",
+              );
+              setActiveBusiness(
+                freshGuestBiz.id,
+                freshGuestBiz.name,
+                freshGuestBiz.currency,
+              );
+            }
+
+            setUser(null);
+            setUnsyncedCount(0);
+            DeviceEventEmitter.emit("WORKSPACE_RESET");
+            onProfileChanged(null);
+            Alert.alert("Deleted", t.accountDeletedMsg);
+          } catch (err: any) {
+            Alert.alert("Error", err.message || "Could not delete account.");
+          } finally {
+            setIsBusy(false);
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <Modal
       visible={visible}
@@ -582,6 +626,34 @@ export function UserAccountModal({
                       </Text>
                     </>
                   )}
+                </Pressable>
+                <Pressable
+                  onPress={handleDeleteAccount}
+                  disabled={isBusy}
+                  style={{
+                    marginTop: 14,
+                    paddingVertical: 8,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                >
+                  <Ionicons
+                    name="trash-outline"
+                    size={15}
+                    color={colors.secondaryMutedText}
+                  />
+                  <Text
+                    style={{
+                      fontFamily: "Inter_600SemiBold",
+                      fontSize: 12,
+                      color: colors.secondaryMutedText,
+                      textDecorationLine: "underline",
+                    }}
+                  >
+                    {t.deleteAccountBtn}
+                  </Text>
                 </Pressable>
               </View>
             ) : (

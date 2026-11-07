@@ -349,3 +349,42 @@ export async function loginWithGoogleToken(
 
   return profile;
 }
+
+/**
+ * Permanently deletes the user's cloud account via DELETE /auth/account,
+ * clears local SecureStore tokens, and wipes cloud-owned data from local SQLite.
+ */
+export async function deleteCurrentUserAccount(): Promise<void> {
+  const baseUrl = getApiBaseUrl();
+  let token = await getValidAccessToken();
+  if (!token) {
+    throw new Error("Not authenticated.");
+  }
+
+  let res = await fetch(`${baseUrl}/auth/account`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (res.status === 401) {
+    token = await refreshSessionTokens();
+    if (!token) {
+      throw new Error("Session expired. Please sign in again.");
+    }
+    res = await fetch(`${baseUrl}/auth/account`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  }
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to delete account.");
+  }
+
+  await logoutUserAccount();
+}
