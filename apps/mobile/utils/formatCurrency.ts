@@ -1,3 +1,4 @@
+// apps/mobile/utils/formatCurrency.ts
 export type CurrencyCode = "BDT" | "INR";
 
 export const CURRENCY_SYMBOL_MAP: Record<CurrencyCode, string> = {
@@ -47,4 +48,21 @@ export function formatCurrency(
   }).format(target);
 
   return `${symbol} ${formatted}`;
+}
+
+/**
+ * 4. Formats a balance with an explicit leading "+ " or "- " sign when non-zero.
+ * - Positive (> 0): "+ ৳ 2,500"
+ * - Negative (< 0): "- ৳ 1,200"
+ * - Zero / Settled: "৳ 0"
+ */
+export function formatSignedCurrency(
+  amount: number,
+  currencyCode: CurrencyCode = "BDT",
+): string {
+  const base = formatCurrency(amount, currencyCode, true);
+  if (isSettled(amount)) {
+    return base;
+  }
+  return amount > 0 ? `+ ${base}` : `- ${base}`;
 }

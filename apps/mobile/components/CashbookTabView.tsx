@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
 import { getDbAdapter } from "../db/client";
-import { formatCurrency } from "../utils/formatCurrency";
+import { formatCurrency, formatSignedCurrency } from "../utils/formatCurrency";
 import { getLocalDateString } from "../utils/dateUtils";
 import {
   getCashbookDashboardSummary,
@@ -127,7 +127,7 @@ export function CashbookTabView() {
               numberOfLines={1}
               adjustsFontSizeToFit
             >
-              {formatCurrency(summary?.total_balance || 0, currency, true)}
+              {formatSignedCurrency(summary?.total_balance || 0, currency)}
             </Text>
             <View
               style={[
@@ -147,7 +147,7 @@ export function CashbookTabView() {
                 <Text
                   style={[styles.splitValue, { color: colors.primaryTextDark }]}
                 >
-                  {formatCurrency(summary?.total_cash || 0, currency, false)}
+                  {formatSignedCurrency(summary?.total_cash || 0, currency)}
                 </Text>
               </View>
               <View style={styles.splitCol}>
@@ -162,7 +162,7 @@ export function CashbookTabView() {
                 <Text
                   style={[styles.splitValue, { color: colors.primaryTextDark }]}
                 >
-                  {formatCurrency(summary?.total_online || 0, currency, false)}
+                  {formatSignedCurrency(summary?.total_online || 0, currency)}
                 </Text>
               </View>
             </View>
@@ -196,7 +196,7 @@ export function CashbookTabView() {
               numberOfLines={1}
               adjustsFontSizeToFit
             >
-              {formatCurrency(summary?.today_balance || 0, currency, true)}
+              {formatSignedCurrency(summary?.today_balance || 0, currency)}
             </Text>
             <View
               style={[
@@ -216,7 +216,7 @@ export function CashbookTabView() {
                 <Text
                   style={[styles.splitValue, { color: colors.primaryTextDark }]}
                 >
-                  {formatCurrency(summary?.today_cash || 0, currency, false)}
+                  {formatSignedCurrency(summary?.today_cash || 0, currency)}
                 </Text>
               </View>
               <View style={styles.splitCol}>
@@ -231,7 +231,7 @@ export function CashbookTabView() {
                 <Text
                   style={[styles.splitValue, { color: colors.primaryTextDark }]}
                 >
-                  {formatCurrency(summary?.today_online || 0, currency, false)}
+                  {formatSignedCurrency(summary?.today_online || 0, currency)}
                 </Text>
               </View>
             </View>
