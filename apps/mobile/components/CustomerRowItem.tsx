@@ -3,7 +3,7 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { type CustomerRow } from "../db/customerQueries";
 import {
-  formatCurrency,
+  formatSignedCurrency,
   isSettled,
   type CurrencyCode,
 } from "../utils/formatCurrency";
@@ -101,10 +101,10 @@ export function CustomerRowItem({
         </Text>
       </View>
 
-      {/* Right: Net Balance Only (Grey if 0, Green if You will give, Red if You will get) */}
+      {/* Right: Signed Net Balance (Grey if 0, Green + if You will give, Red - if You will get) */}
       <View style={styles.rightColumn}>
         <Text style={[styles.balanceAmount, { color: balanceColor }]}>
-          {formatCurrency(customer.net_balance, currency, true)}
+          {formatSignedCurrency(customer.net_balance, currency)}
         </Text>
         {balanceSubtitle && (
           <Text

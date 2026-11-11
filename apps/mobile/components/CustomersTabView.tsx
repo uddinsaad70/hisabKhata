@@ -14,7 +14,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
-import { formatCurrency } from "../utils/formatCurrency";
+import { formatSignedCurrency } from "../utils/formatCurrency";
 import { getDbAdapter } from "../db/client";
 import {
   getCustomersWithSummary,
@@ -130,7 +130,7 @@ export function CustomersTabView() {
         ]}
       >
         <View style={styles.summaryTopColumns}>
-          {/* Left Column: You will give (Green #108944) */}
+          {/* Left Column: You will give (Green #108944 with + sign) */}
           <View style={styles.summaryColumn}>
             <Text
               style={[
@@ -143,7 +143,10 @@ export function CustomersTabView() {
             <Text
               style={[styles.summaryAmount, { color: colors.primaryGreen }]}
             >
-              {formatCurrency(summary.totalYouWillGive, activeBusinessCurrency)}
+              {formatSignedCurrency(
+                summary.totalYouWillGive,
+                activeBusinessCurrency,
+              )}
             </Text>
           </View>
 
@@ -154,7 +157,7 @@ export function CustomersTabView() {
             ]}
           />
 
-          {/* Right Column: You will get (Red #C91C42) */}
+          {/* Right Column: You will get (Red #C91C42 with - sign) */}
           <View style={styles.summaryColumn}>
             <Text
               style={[
@@ -165,7 +168,10 @@ export function CustomersTabView() {
               {t.youWillGet}
             </Text>
             <Text style={[styles.summaryAmount, { color: colors.primaryRed }]}>
-              {formatCurrency(summary.totalYouWillGet, activeBusinessCurrency)}
+              {formatSignedCurrency(
+                -Math.abs(summary.totalYouWillGet),
+                activeBusinessCurrency,
+              )}
             </Text>
           </View>
         </View>

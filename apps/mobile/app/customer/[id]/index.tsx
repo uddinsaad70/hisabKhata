@@ -16,7 +16,11 @@ import * as Linking from "expo-linking";
 import { UndoSnackbar } from "../../../components/UndoSnackbar";
 import { useUiStore } from "../../../store/uiStore";
 import { getThemeColors } from "../../../constants/theme";
-import { formatCurrency, isSettled } from "../../../utils/formatCurrency";
+import {
+  formatCurrency,
+  isSettled,
+  formatSignedCurrency,
+} from "../../../utils/formatCurrency";
 import { getDbAdapter } from "../../../db/client";
 import {
   getCustomerById,
@@ -166,10 +170,9 @@ export default function CustomerLedgerScreen() {
               </Text>
             )}
             <Text style={[styles.balanceAmount, { color: balanceColor }]}>
-              {formatCurrency(
+              {formatSignedCurrency(
                 customer.net_balance,
                 activeBusinessCurrency,
-                true,
               )}
             </Text>
           </View>
@@ -315,10 +318,9 @@ export default function CustomerLedgerScreen() {
                         ]}
                       >
                         {t.balPrefix}{" "}
-                        {formatCurrency(
+                        {formatSignedCurrency(
                           item.running_balance,
                           activeBusinessCurrency,
-                          true,
                         )}
                       </Text>
                     </View>
