@@ -1,15 +1,18 @@
 // apps/mobile/components/CashbookTabView.tsx
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useRef } from "react";
 import {
   StyleSheet,
   Text,
   View,
   Pressable,
   DeviceEventEmitter,
+  Platform,
+  Alert,
 } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
@@ -40,6 +43,9 @@ export function CashbookTabView() {
   const [dailyTotals, setDailyTotals] = useState<
     Record<string, { in: number; out: number; count: number }>
   >({});
+  const [showCalendarPicker, setShowCalendarPicker] = useState(false);
+  const [pickerDate, setPickerDate] = useState<Date>(new Date());
+  const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
 
   const loadDashboard = useCallback(async () => {
     if (!activeBusinessId) return;
@@ -91,8 +97,42 @@ export function CashbookTabView() {
         sub2.remove();
         sub3.remove();
       };
-    }, [loadDashboard]),
+}, [loadDashboard]),
   );
+
+  const handleOpenDatePicker = (dateStr: string) => {
+    const parsed = new Date(`${dateStr}T00:00:00`);
+    setPickerDate(Number.isNaN(parsed.getTime()) ? new Date() : parsed);
+    setShowCalendarPicker(true);
+  };
+
+  const handleDateSelected = (selectedDate: Date) => {
+    setPickerDate(selectedDate);
+    const targetDateStr = getLocalDateString(selectedDate);
+
+    const targetIndex = allEntries.findIndex(
+      (entry) => entry.entry_date === targetDateStr,
+    );
+
+    if (targetIndex !== -1 && flashListRef.current) {
+      try {
+        flashListRef.current.scrollToIndex({
+          index: targetIndex,
+          animated: true,
+          viewPosition: 0,
+        });
+      } catch {
+        // Ignore if layout measurement is still pending
+      }
+    } else {
+      Alert.alert(
+        language === "bn" ? "কোনো লেনদেন নেই" : "No Transactions",
+        language === "bn"
+          ? `${targetDateStr} তারিখে ক্যাশবুকে কোনো লেনদেন পাওয়া যায়নি।`
+          : `No cashbook entries found on ${targetDateStr}.`,
+      );
+    }
+  };
 
   return (
     <View style={styles.root}>
@@ -301,9 +341,10 @@ export function CashbookTabView() {
           </View>
         </View>
 
-        {/* Entries List */}
+{/* Entries List */}
         <View style={{ flex: 1 }}>
           <FlashList
+            ref={flashListRef}
             data={allEntries}
             keyExtractor={(item) => item.id}
             renderItem={({ item, index }) => {
@@ -325,14 +366,32 @@ export function CashbookTabView() {
                       ]}
                     >
                       <View style={styles.colEntriesHeader}>
-                        <Text
-                          style={[
-                            styles.dateHeaderText,
-                            { color: colors.primaryTextDark },
+                        <Pressable
+                          onPress={() => handleOpenDatePicker(item.entry_date)}
+                          style={({ pressed }) => [
+                            styles.dateHeaderPill,
+                            {
+                              backgroundColor: colors.cardSurface,
+                              borderColor: colors.borderDivider,
+                              borderWidth: 1,
+                              opacity: pressed ? 0.75 : 1,
+                            },
                           ]}
                         >
-                          {item.entry_date}
-                        </Text>
+                          <Ionicons
+                            name="calendar-outline"
+                            size={12}
+                            color={colors.primaryBlue}
+                          />
+                          <Text
+                            style={[
+                              styles.dateHeaderText,
+                              { color: colors.primaryTextDark },
+                            ]}
+                          >
+                            {item.entry_date}
+                          </Text>
+                        </Pressable>
                         <Text
                           style={[
                             styles.dateCountText,
@@ -390,10 +449,25 @@ export function CashbookTabView() {
                   {t.noEntriesFound}
                 </Text>
               </View>
-            )}
+)}
           />
         </View>
       </View>
+
+      {showCalendarPicker && (
+        <DateTimePicker
+          value={pickerDate}
+          mode="date"
+          display={Platform.OS === "android" ? "calendar" : "inline"}
+          maximumDate={new Date()}
+          onChange={(event, selectedDate) => {
+            setShowCalendarPicker(false);
+            if (event.type === "set" && selectedDate) {
+              handleDateSelected(selectedDate);
+            }
+          }}
+        />
+      )}
 
       {/* Bottom Sticky Action Buttons */}
       <View
@@ -479,10 +553,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     alignItems: "center",
   },
+  dateHeaderPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 5,
+    marginBottom: 4,
+  },
   dateHeaderText: {
     fontFamily: "Inter_700Bold",
-    fontSize: 12,
-    marginBottom: 2,
+    fontSize: 11,
   },
   dateCountText: { fontFamily: "Inter_500Medium", fontSize: 10 },
   dateTotalText: {
