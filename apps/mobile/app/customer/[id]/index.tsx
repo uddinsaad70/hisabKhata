@@ -1,5 +1,5 @@
 // apps/mobile/app/customer/[id]/index.tsx
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import {
   Platform,
   Pressable,
@@ -7,11 +7,13 @@ import {
   Text,
   View,
   DeviceEventEmitter,
+  Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
-import { FlashList } from "@shopify/flash-list";
+import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { Ionicons } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 import { UndoSnackbar } from "../../../components/UndoSnackbar";
 import { useUiStore } from "../../../store/uiStore";
@@ -29,6 +31,7 @@ import {
   type CustomerLedgerEntryRow,
 } from "../../../db/customerQueries";
 import { getStrings } from "../../../constants/translations";
+import { getLocalDateString } from "../../../utils/dateUtils";
 
 export default function CustomerLedgerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,9 +45,13 @@ export default function CustomerLedgerScreen() {
   const t = getStrings(language);
   const colors = getThemeColors(themeMode);
 
-  const [customer, setCustomer] = useState<CustomerRow | null>(null);
+const [customer, setCustomer] = useState<CustomerRow | null>(null);
   const [entries, setEntries] = useState<CustomerLedgerEntryRow[]>([]);
-
+  const [showCalendarPicker, setShowCalendarPicker] = useState(false);
+  const [pickerDate, setPickerDate] = useState<Date>(new Date());
+  const flashListRef = useRef<FlashListRef<CustomerLedgerEntryRow> | null>(
+    null,
+  );
   // Load customer and entries data from SQLite
   const loadData = useCallback(async () => {
     if (!activeBusinessId || !id || Platform.OS === "web") return;
@@ -82,6 +89,42 @@ export default function CustomerLedgerScreen() {
   const handleCall = () => {
     if (customer?.phone) {
       Linking.openURL(`tel:${customer.phone}`);
+    }
+  };
+
+  // Opens the standard calendar popup initialized at the tapped pill's date
+  const handleOpenDatePicker = (dateStr: string) => {
+    const parsed = new Date(`${dateStr}T00:00:00`);
+    setPickerDate(Number.isNaN(parsed.getTime()) ? new Date() : parsed);
+    setShowCalendarPicker(true);
+  };
+
+  // Jumps to the first transaction matching the selected date
+  const handleDateSelected = (selectedDate: Date) => {
+    setPickerDate(selectedDate);
+    const targetDateStr = getLocalDateString(selectedDate);
+
+    const targetIndex = entries.findIndex(
+      (entry) => entry.entry_date === targetDateStr,
+    );
+
+    if (targetIndex !== -1 && flashListRef.current) {
+      try {
+        flashListRef.current.scrollToIndex({
+          index: targetIndex,
+          animated: true,
+          viewPosition: 0,
+        });
+      } catch {
+        // Ignore if layout measurement is still pending
+      }
+    } else {
+      Alert.alert(
+        language === "bn" ? "কোনো লেনদেন নেই" : "No Transactions",
+        language === "bn"
+          ? `${targetDateStr} তারিখে এই কাস্টমারের কোনো লেনদেন পাওয়া যায়নি।`
+          : `No transactions found for this customer on ${targetDateStr}.`,
+      );
     }
   };
 
@@ -238,9 +281,10 @@ export default function CustomerLedgerScreen() {
         </View>
       </View>
 
-      {/* Entries List */}
+{/* Entries List */}
       <View style={styles.listContainer}>
         <FlashList
+          ref={flashListRef}
           data={entries}
           keyExtractor={(item) => item.id}
           renderItem={({ item, index }) => {
@@ -252,16 +296,23 @@ export default function CustomerLedgerScreen() {
               <View>
                 {showDateHeader && (
                   <View style={styles.dateHeaderContainer}>
-                    <View
-                      style={[
+                    <Pressable
+                      onPress={() => handleOpenDatePicker(item.entry_date)}
+                      style={({ pressed }) => [
                         styles.dateHeaderPill,
                         {
                           backgroundColor: colors.cardSurface,
                           borderColor: colors.borderDivider,
                           borderWidth: 1,
+                          opacity: pressed ? 0.75 : 1,
                         },
                       ]}
                     >
+                      <Ionicons
+                        name="calendar-outline"
+                        size={13}
+                        color={colors.primaryBlue}
+                      />
                       <Text
                         style={[
                           styles.dateHeaderText,
@@ -270,7 +321,7 @@ export default function CustomerLedgerScreen() {
                       >
                         {item.entry_date}
                       </Text>
-                    </View>
+                    </Pressable>
                   </View>
                 )}
 
@@ -383,8 +434,23 @@ export default function CustomerLedgerScreen() {
               </View>
             );
           }}
-        />
+      />
       </View>
+
+      {showCalendarPicker && (
+        <DateTimePicker
+          value={pickerDate}
+          mode="date"
+          display={Platform.OS === "android" ? "calendar" : "inline"}
+          maximumDate={new Date()}
+          onChange={(event, selectedDate) => {
+            setShowCalendarPicker(false);
+            if (event.type === "set" && selectedDate) {
+              handleDateSelected(selectedDate);
+            }
+          }}
+        />
+      )}
 
       {/* Bottom Action Buttons */}
       <View
@@ -520,9 +586,12 @@ const styles = StyleSheet.create({
   listContainer: { flex: 1 },
   dateHeaderContainer: { alignItems: "center", marginVertical: 12 },
   dateHeaderPill: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    gap: 6,
   },
   dateHeaderText: { fontFamily: "Inter_600SemiBold", fontSize: 11 },
   entryRow: { flexDirection: "row", borderBottomWidth: 1 },
