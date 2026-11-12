@@ -255,7 +255,11 @@ export default function CustomerLedgerScreen() {
                     <View
                       style={[
                         styles.dateHeaderPill,
-                        { backgroundColor: "#E5E7EB" },
+                        {
+                          backgroundColor: colors.cardSurface,
+                          borderColor: colors.borderDivider,
+                          borderWidth: 1,
+                        },
                       ]}
                     >
                       <Text
