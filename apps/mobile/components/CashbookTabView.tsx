@@ -1,5 +1,5 @@
 // apps/mobile/components/CashbookTabView.tsx
-import React, { useCallback, useState, useRef } from "react";
+import React, { useCallback, useState, useRef, useMemo } from "react";
 import {
   StyleSheet,
   Text,
@@ -45,8 +45,10 @@ export function CashbookTabView() {
   >({});
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
   const [pickerDate, setPickerDate] = useState<Date>(new Date());
-  const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
+const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
   const prevTopEntryIdRef = useRef<string | null>(null);
+  const [isScrolledDown, setIsScrolledDown] = useState(false);
+  const isScrolledDownRef = useRef(false);
 
   const loadDashboard = useCallback(async () => {
     if (!activeBusinessId) return;
@@ -120,18 +122,39 @@ export function CashbookTabView() {
     setShowCalendarPicker(true);
   };
 
+// Prepend virtual sticky header item at index 0 so ENTRIES | OUT | IN sticks at the top while cards scroll away
+  const listDataWithStickyHeader = useMemo<CashbookEntryRow[]>(() => {
+    const stickyHeaderSentinel: CashbookEntryRow = {
+      id: "__STICKY_TABLE_HEADER__",
+      business_id: activeBusinessId || "",
+      type: "IN",
+      payment_mode: "CASH",
+      amount: 0,
+      details: null,
+      entry_date: "",
+      entry_time: "",
+      timestamp: 0,
+      is_deleted: 0,
+      is_synced: 1,
+      created_at: 0,
+      updated_at: 0,
+    };
+    return [stickyHeaderSentinel, ...allEntries];
+  }, [allEntries, activeBusinessId]);
+
   const handleDateSelected = (selectedDate: Date) => {
     setPickerDate(selectedDate);
     const targetDateStr = getLocalDateString(selectedDate);
 
-    const targetIndex = allEntries.findIndex(
+    const foundIndex = allEntries.findIndex(
       (entry) => entry.entry_date === targetDateStr,
     );
 
-    if (targetIndex !== -1 && flashListRef.current) {
+    if (foundIndex !== -1 && flashListRef.current) {
       try {
+        // +1 because index 0 is the sticky table header
         flashListRef.current.scrollToIndex({
-          index: targetIndex,
+          index: foundIndex + 1,
           animated: true,
           viewPosition: 0,
         });
@@ -150,309 +173,497 @@ export function CashbookTabView() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.scrollContent}>
-        {/* Side-by-Side Cards (Total & Today) */}
-        <View style={styles.cardsRow}>
-          {/* Total Balance Card */}
-          <View
-            style={[
-              styles.halfCard,
-              {
-                backgroundColor: colors.cardSurface,
-                borderColor: colors.borderDivider,
-              },
-            ]}
-          >
-            <Text
-              style={[styles.cardTitle, { color: colors.secondaryMutedText }]}
-            >
-              {t.totalBalance}
-            </Text>
-            <Text
-              style={[
-                styles.mainAmount,
-                {
-                  color:
-                    (summary?.total_balance || 0) >= 0
-                      ? colors.primaryGreen
-                      : colors.primaryRed,
-                },
-              ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-            >
-              {formatSignedCurrency(summary?.total_balance || 0, currency)}
-            </Text>
-            <View
-              style={[
-                styles.splitRow,
-                { borderTopColor: colors.borderDivider },
-              ]}
-            >
-              <View style={styles.splitCol}>
-                <Text
+<View style={styles.scrollContent}>
+        <FlashList
+          ref={flashListRef}
+          data={listDataWithStickyHeader}
+          extraData={isScrolledDown}
+          keyExtractor={(item) => item.id}
+          stickyHeaderIndices={[0]}
+          contentContainerStyle={{ paddingBottom: 70 }}
+          onScroll={(e) => {
+            const y = e.nativeEvent.contentOffset.y;
+            if (y > 135 && !isScrolledDownRef.current) {
+              isScrolledDownRef.current = true;
+              setIsScrolledDown(true);
+            } else if (y <= 115 && isScrolledDownRef.current) {
+              isScrolledDownRef.current = false;
+              setIsScrolledDown(false);
+            }
+          }}
+          scrollEventThrottle={16}
+          getItemType={(item) =>
+            item.id === "__STICKY_TABLE_HEADER__" ? "stickyHeader" : "row"
+          }
+          ListHeaderComponent={
+            <View>
+              {/* Side-by-Side Cards (Total & Today) — Scrolls away smoothly */}
+              <View style={styles.cardsRow}>
+                {/* Total Balance Card */}
+                <View
                   style={[
-                    styles.splitLabel,
-                    { color: colors.secondaryMutedText },
+                    styles.halfCard,
+                    {
+                      backgroundColor: colors.cardSurface,
+                      borderColor: colors.borderDivider,
+                    },
                   ]}
                 >
-                  {t.cashInHand}
-                </Text>
-                <Text
-                  style={[styles.splitValue, { color: colors.primaryTextDark }]}
-                >
-                  {formatSignedCurrency(summary?.total_cash || 0, currency)}
-                </Text>
-              </View>
-              <View style={styles.splitCol}>
-                <Text
+                  <Text
+                    style={[
+                      styles.cardTitle,
+                      { color: colors.secondaryMutedText },
+                    ]}
+                  >
+                    {t.totalBalance}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.mainAmount,
+                      {
+                        color:
+                          (summary?.total_balance || 0) >= 0
+                            ? colors.primaryGreen
+                            : colors.primaryRed,
+                      },
+                    ]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    {formatSignedCurrency(
+                      summary?.total_balance || 0,
+                      currency,
+                    )}
+                  </Text>
+                  <View
+                    style={[
+                      styles.splitRow,
+                      { borderTopColor: colors.borderDivider },
+                    ]}
+                  >
+                    <View style={styles.splitCol}>
+                      <Text
+                        style={[
+                          styles.splitLabel,
+                          { color: colors.secondaryMutedText },
+                        ]}
+                      >
+                        {t.cashInHand}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.splitValue,
+                          { color: colors.primaryTextDark },
+                        ]}
+                      >
+                        {formatSignedCurrency(
+                          summary?.total_cash || 0,
+                          currency,
+                        )}
+                      </Text>
+                    </View>
+                    <View style={styles.splitCol}>
+                      <Text
+                        style={[
+                          styles.splitLabel,
+                          { color: colors.secondaryMutedText },
+                        ]}
+                      >
+                        {t.online}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.splitValue,
+                          { color: colors.primaryTextDark },
+                        ]}
+                      >
+                        {formatSignedCurrency(
+                          summary?.total_online || 0,
+                          currency,
+                        )}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Today's Balance Card */}
+                <View
                   style={[
-                    styles.splitLabel,
-                    { color: colors.secondaryMutedText },
+                    styles.halfCard,
+                    {
+                      backgroundColor: colors.cardSurface,
+                      borderColor: colors.borderDivider,
+                    },
                   ]}
                 >
-                  {t.online}
-                </Text>
-                <Text
-                  style={[styles.splitValue, { color: colors.primaryTextDark }]}
-                >
-                  {formatSignedCurrency(summary?.total_online || 0, currency)}
-                </Text>
+                  <Text
+                    style={[
+                      styles.cardTitle,
+                      { color: colors.secondaryMutedText },
+                    ]}
+                  >
+                    {t.todaysBalance}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.mainAmount,
+                      {
+                        color:
+                          (summary?.today_balance || 0) >= 0
+                            ? colors.primaryGreen
+                            : colors.primaryRed,
+                      },
+                    ]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    {formatSignedCurrency(
+                      summary?.today_balance || 0,
+                      currency,
+                    )}
+                  </Text>
+                  <View
+                    style={[
+                      styles.splitRow,
+                      { borderTopColor: colors.borderDivider },
+                    ]}
+                  >
+                    <View style={styles.splitCol}>
+                      <Text
+                        style={[
+                          styles.splitLabel,
+                          { color: colors.secondaryMutedText },
+                        ]}
+                      >
+                        {t.cashInHand}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.splitValue,
+                          { color: colors.primaryTextDark },
+                        ]}
+                      >
+                        {formatSignedCurrency(
+                          summary?.today_cash || 0,
+                          currency,
+                        )}
+                      </Text>
+                    </View>
+                    <View style={styles.splitCol}>
+                      <Text
+                        style={[
+                          styles.splitLabel,
+                          { color: colors.secondaryMutedText },
+                        ]}
+                      >
+                        {t.online}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.splitValue,
+                          { color: colors.primaryTextDark },
+                        ]}
+                      >
+                        {formatSignedCurrency(
+                          summary?.today_online || 0,
+                          currency,
+                        )}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
               </View>
+
+              <Pressable
+                onPress={() => router.push("/cashbook/report" as never)}
+                style={styles.reportBtnMain}
+              >
+                <Ionicons
+                  name="document-text-outline"
+                  size={16}
+                  color={colors.primaryBlue}
+                />
+                <Text
+                  style={[
+                    styles.reportBtnMainText,
+                    { color: colors.primaryBlue },
+                  ]}
+                >
+                  {t.viewCashbookReport}
+                </Text>
+              </Pressable>
             </View>
-          </View>
-
-          {/* Today's Balance Card */}
-          <View
-            style={[
-              styles.halfCard,
-              {
-                backgroundColor: colors.cardSurface,
-                borderColor: colors.borderDivider,
-              },
-            ]}
-          >
-            <Text
-              style={[styles.cardTitle, { color: colors.secondaryMutedText }]}
-            >
-              {t.todaysBalance}
-            </Text>
-            <Text
-              style={[
-                styles.mainAmount,
-                {
-                  color:
-                    (summary?.today_balance || 0) >= 0
-                      ? colors.primaryGreen
-                      : colors.primaryRed,
-                },
-              ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-            >
-              {formatSignedCurrency(summary?.today_balance || 0, currency)}
-            </Text>
-            <View
-              style={[
-                styles.splitRow,
-                { borderTopColor: colors.borderDivider },
-              ]}
-            >
-              <View style={styles.splitCol}>
-                <Text
-                  style={[
-                    styles.splitLabel,
-                    { color: colors.secondaryMutedText },
-                  ]}
-                >
-                  {t.cashInHand}
-                </Text>
-                <Text
-                  style={[styles.splitValue, { color: colors.primaryTextDark }]}
-                >
-                  {formatSignedCurrency(summary?.today_cash || 0, currency)}
-                </Text>
-              </View>
-              <View style={styles.splitCol}>
-                <Text
-                  style={[
-                    styles.splitLabel,
-                    { color: colors.secondaryMutedText },
-                  ]}
-                >
-                  {t.online}
-                </Text>
-                <Text
-                  style={[styles.splitValue, { color: colors.primaryTextDark }]}
-                >
-                  {formatSignedCurrency(summary?.today_online || 0, currency)}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        <Pressable
-          onPress={() => router.push("/cashbook/report" as never)}
-          style={styles.reportBtnMain}
-        >
-          <Ionicons
-            name="document-text-outline"
-            size={16}
-            color={colors.primaryBlue}
-          />
-          <Text
-            style={[styles.reportBtnMainText, { color: colors.primaryBlue }]}
-          >
-            {t.viewCashbookReport}
-          </Text>
-        </Pressable>
-
-        {/* 3-Column Sticky Header */}
-        <View
-          style={[
-            styles.columnHeader,
-            {
-              backgroundColor: colors.cardSurface,
-              borderBottomColor: colors.borderDivider,
-            },
-          ]}
-        >
-          <View style={styles.colEntriesHeader}>
-            <Text
-              style={[
-                styles.colHeaderText,
-                { color: colors.secondaryMutedText },
-              ]}
-            >
-              {t.entriesHeader}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.colOutHeader,
-              { backgroundColor: colors.lightPinkColumnTint },
-            ]}
-          >
-            <Text
-              style={[
-                styles.colHeaderText,
-                { color: colors.secondaryMutedText },
-              ]}
-            >
-              {t.outHeader}
-            </Text>
-          </View>
-          <View style={styles.colInHeader}>
-            <Text
-              style={[
-                styles.colHeaderText,
-                { color: colors.secondaryMutedText },
-              ]}
-            >
-              {t.inHeader}
-            </Text>
-          </View>
-        </View>
-
-{/* Entries List */}
-        <View style={{ flex: 1 }}>
-          <FlashList
-            ref={flashListRef}
-            data={allEntries}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item, index }) => {
-              const showDateHeader =
-                index === 0 ||
-                allEntries[index - 1].entry_date !== item.entry_date;
-              const dTotals = dailyTotals[item.entry_date];
-
+          }
+          renderItem={({ item, index }) => {
+            // Index 0 renders the Sticky Header (Minimized Summary Bar when scrolled + 3-Column Table Header)
+            if (item.id === "__STICKY_TABLE_HEADER__") {
               return (
-                <View>
-                  {showDateHeader && (
+                <View
+                  style={{
+                    backgroundColor: colors.cardSurface,
+                    elevation: isScrolledDown ? 3 : 0,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: isScrolledDown ? 0.08 : 0,
+                    shadowRadius: 3,
+                  }}
+                >
+                  {isScrolledDown && (
                     <View
                       style={[
-                        styles.dateHeaderRow,
+                        styles.minimizedBar,
                         {
-                          backgroundColor: colors.pageBackgroundGrey,
+                          backgroundColor: colors.cardSurface,
                           borderBottomColor: colors.borderDivider,
                         },
                       ]}
                     >
-                      <View style={styles.colEntriesHeader}>
-                        <Pressable
-                          onPress={() => handleOpenDatePicker(item.entry_date)}
-                          style={({ pressed }) => [
-                            styles.dateHeaderPill,
-                            {
-                              backgroundColor: colors.cardSurface,
-                              borderColor: colors.borderDivider,
-                              borderWidth: 1,
-                              opacity: pressed ? 0.75 : 1,
-                            },
-                          ]}
-                        >
-                          <Ionicons
-                            name="calendar-outline"
-                            size={12}
-                            color={colors.primaryBlue}
-                          />
+                      <Pressable
+                        onPress={() =>
+                          flashListRef.current?.scrollToOffset({
+                            offset: 0,
+                            animated: true,
+                          })
+                        }
+                        style={styles.minimizedBalancesRow}
+                      >
+                        <View style={styles.minimizedItem}>
                           <Text
                             style={[
-                              styles.dateHeaderText,
-                              { color: colors.primaryTextDark },
+                              styles.minimizedLabel,
+                              { color: colors.secondaryMutedText },
                             ]}
+                            numberOfLines={1}
                           >
-                            {item.entry_date}
+                            {t.totalBalance}:
                           </Text>
-                        </Pressable>
-                        <Text
+                          <Text
+                            style={[
+                              styles.minimizedValue,
+                              {
+                                color:
+                                  (summary?.total_balance || 0) >= 0
+                                    ? colors.primaryGreen
+                                    : colors.primaryRed,
+                              },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {formatSignedCurrency(
+                              summary?.total_balance || 0,
+                              currency,
+                            )}
+                          </Text>
+                        </View>
+
+                        <View
                           style={[
-                            styles.dateCountText,
-                            { color: colors.secondaryMutedText },
+                            styles.minimizedDivider,
+                            { backgroundColor: colors.borderDivider },
                           ]}
-                        >
-                          {dTotals?.count || 0} {t.entriesCountLabel}
-                        </Text>
-                      </View>
-                      <View
+                        />
+
+                        <View style={styles.minimizedItem}>
+                          <Text
+                            style={[
+                              styles.minimizedLabel,
+                              { color: colors.secondaryMutedText },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {t.todaysBalance}:
+                          </Text>
+                          <Text
+                            style={[
+                              styles.minimizedValue,
+                              {
+                                color:
+                                  (summary?.today_balance || 0) >= 0
+                                    ? colors.primaryGreen
+                                    : colors.primaryRed,
+                              },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {formatSignedCurrency(
+                              summary?.today_balance || 0,
+                              currency,
+                            )}
+                          </Text>
+                        </View>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => router.push("/cashbook/report" as never)}
+                        hitSlop={8}
                         style={[
-                          styles.colOutHeader,
-                          { backgroundColor: colors.pageBackgroundGrey },
+                          styles.minimizedReportBtn,
+                          {
+                            backgroundColor: colors.pageBackgroundGrey,
+                            borderColor: colors.borderDivider,
+                          },
                         ]}
                       >
+                        <Ionicons
+                          name="document-text-outline"
+                          size={13}
+                          color={colors.primaryBlue}
+                        />
                         <Text
                           style={[
-                            styles.dateTotalText,
-                            { color: colors.primaryRed },
+                            styles.minimizedReportText,
+                            { color: colors.primaryBlue },
                           ]}
                         >
-                          {formatCurrency(dTotals?.out || 0, currency, true)}
+                          {t.reportBtn}
                         </Text>
-                      </View>
-                      <View style={styles.colInHeader}>
-                        <Text
-                          style={[
-                            styles.dateTotalText,
-                            { color: colors.primaryGreen },
-                          ]}
-                        >
-                          {formatCurrency(dTotals?.in || 0, currency, true)}
-                        </Text>
-                      </View>
+                      </Pressable>
                     </View>
                   )}
-                  <CashbookRowItem
-                    entry={item}
-                    currency={currency}
-                    onPress={() =>
-                      router.push(`/cashbook/entry/${item.id}` as never)
-                    }
-                  />
+
+                  <View
+                    style={[
+                      styles.columnHeader,
+                      {
+                        backgroundColor: colors.cardSurface,
+                        borderBottomColor: colors.borderDivider,
+                      },
+                    ]}
+                  >
+                    <View style={styles.colEntriesHeader}>
+                      <Text
+                        style={[
+                          styles.colHeaderText,
+                          { color: colors.secondaryMutedText },
+                        ]}
+                      >
+                        {t.entriesHeader}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.colOutHeader,
+                        { backgroundColor: colors.lightPinkColumnTint },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.colHeaderText,
+                          { color: colors.secondaryMutedText },
+                        ]}
+                      >
+                        {t.outHeader}
+                      </Text>
+                    </View>
+                    <View style={styles.colInHeader}>
+                      <Text
+                        style={[
+                          styles.colHeaderText,
+                          { color: colors.secondaryMutedText },
+                        ]}
+                      >
+                        {t.inHeader}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               );
-            }}
-            ListEmptyComponent={() => (
+            }
+
+            // Regular Cashbook Entries (starting at index 1)
+            const prevItem = listDataWithStickyHeader[index - 1];
+            const showDateHeader =
+              index === 1 || prevItem.entry_date !== item.entry_date;
+            const dTotals = dailyTotals[item.entry_date];
+
+            return (
+              <View>
+                {showDateHeader && (
+                  <View
+                    style={[
+                      styles.dateHeaderRow,
+                      {
+                        backgroundColor: colors.pageBackgroundGrey,
+                        borderBottomColor: colors.borderDivider,
+                      },
+                    ]}
+                  >
+                    <View style={styles.colEntriesHeader}>
+                      <Pressable
+                        onPress={() => handleOpenDatePicker(item.entry_date)}
+                        style={({ pressed }) => [
+                          styles.dateHeaderPill,
+                          {
+                            backgroundColor: colors.cardSurface,
+                            borderColor: colors.borderDivider,
+                            borderWidth: 1,
+                            opacity: pressed ? 0.75 : 1,
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name="calendar-outline"
+                          size={12}
+                          color={colors.primaryBlue}
+                        />
+                        <Text
+                          style={[
+                            styles.dateHeaderText,
+                            { color: colors.primaryTextDark },
+                          ]}
+                        >
+                          {item.entry_date}
+                        </Text>
+                      </Pressable>
+                      <Text
+                        style={[
+                          styles.dateCountText,
+                          { color: colors.secondaryMutedText },
+                        ]}
+                      >
+                        {dTotals?.count || 0} {t.entriesCountLabel}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.colOutHeader,
+                        { backgroundColor: colors.pageBackgroundGrey },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.dateTotalText,
+                          { color: colors.primaryRed },
+                        ]}
+                      >
+                        {formatCurrency(dTotals?.out || 0, currency, true)}
+                      </Text>
+                    </View>
+                    <View style={styles.colInHeader}>
+                      <Text
+                        style={[
+                          styles.dateTotalText,
+                          { color: colors.primaryGreen },
+                        ]}
+                      >
+                        {formatCurrency(dTotals?.in || 0, currency, true)}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+                <CashbookRowItem
+                  entry={item}
+                  currency={currency}
+                  onPress={() =>
+                    router.push(`/cashbook/entry/${item.id}` as never)
+                  }
+                />
+              </View>
+            );
+          }}
+          ListEmptyComponent={() => null}
+          ListFooterComponent={
+            allEntries.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text
                   style={[
@@ -463,9 +674,9 @@ export function CashbookTabView() {
                   {t.noEntriesFound}
                 </Text>
               </View>
-)}
-          />
-        </View>
+            ) : null
+          }
+        />
       </View>
 
       {showCalendarPicker && (
@@ -483,21 +694,13 @@ export function CashbookTabView() {
         />
       )}
 
-      {/* Bottom Sticky Action Buttons */}
-      <View
-        style={[
-          styles.bottomBar,
-          {
-            backgroundColor: colors.cardSurface,
-            borderTopColor: colors.borderDivider,
-          },
-        ]}
-      >
+      {/* Bottom Floating Action Buttons (snug against lower tab bar, zero wasted container box) */}
+      <View style={styles.bottomBar} pointerEvents="box-none">
         <Pressable
           onPress={() => router.push(`/cashbook/entry-form?type=OUT` as never)}
           style={[
             styles.actionBtn,
-            { backgroundColor: colors.primaryRed, marginRight: 6 },
+            { backgroundColor: colors.primaryRed, marginRight: 5 },
           ]}
         >
           <Text style={styles.actionBtnText}>{t.btnOut}</Text>
@@ -506,7 +709,7 @@ export function CashbookTabView() {
           onPress={() => router.push(`/cashbook/entry-form?type=IN` as never)}
           style={[
             styles.actionBtn,
-            { backgroundColor: colors.primaryGreen, marginLeft: 6 },
+            { backgroundColor: colors.primaryGreen, marginLeft: 5 },
           ]}
         >
           <Text style={styles.actionBtnText}>{t.btnIn}</Text>
@@ -586,20 +789,77 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
+  minimizedBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+  },
+  minimizedBalancesRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  minimizedItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 1,
+  },
+  minimizedLabel: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 10,
+  },
+  minimizedValue: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 11,
+  },
+  minimizedDivider: {
+    width: 1,
+    height: 14,
+    marginHorizontal: 8,
+  },
+  minimizedReportBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginLeft: 6,
+  },
+  minimizedReportText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 10,
+  },
   emptyState: { paddingVertical: 32, alignItems: "center" },
   emptyText: { fontFamily: "Inter_500Medium", fontSize: 14 },
-  bottomBar: { flexDirection: "row", padding: 12, borderTopWidth: 1 },
+  bottomBar: {
+    position: "absolute",
+    bottom: 6,
+    left: 10,
+    right: 10,
+    flexDirection: "row",
+  },
   actionBtn: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
   },
   actionBtnText: {
     color: "#FFFFFF",
     fontFamily: "Inter_700Bold",
-    fontSize: 15,
+    fontSize: 14,
     letterSpacing: 0.5,
   },
 });
