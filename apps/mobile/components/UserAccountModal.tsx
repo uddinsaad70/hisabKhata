@@ -74,6 +74,9 @@ export function UserAccountModal({
   const [isBusy, setIsBusy] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
+  const [photoPickerTarget, setPhotoPickerTarget] = useState<
+    "LOGGED_IN" | "REGISTER_DRAFT" | null
+  >(null);
 
   const googleClientId = (
     process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || ""
@@ -306,26 +309,8 @@ export function UserAccountModal({
     }
   };
 
-  const handlePickPhoto = (forLoggedInUser: boolean) => {
-    Alert.alert(
-      t.updateProfilePhotoTitle,
-      t.updateProfilePhotoPrompt,
-      [
-        {
-          text: t.cancelBtn,
-          style: "cancel",
-        },
-        {
-          text: t.chooseFromGalleryOption,
-          onPress: () => void launchPhotoSource("GALLERY", forLoggedInUser),
-        },
-        {
-          text: t.takePhotoOption,
-          onPress: () => void launchPhotoSource("CAMERA", forLoggedInUser),
-        },
-      ],
-      { cancelable: true },
-    );
+const handlePickPhoto = (forLoggedInUser: boolean) => {
+    setPhotoPickerTarget(forLoggedInUser ? "LOGGED_IN" : "REGISTER_DRAFT");
   };
   
   const handleAuthSubmit = async () => {
@@ -909,6 +894,143 @@ export function UserAccountModal({
               </View>
             )}
           </ScrollView>
+
+          {/* Custom Styled Photo Source Picker Overlay (Replaces ugly system Alert) */}
+          {photoPickerTarget !== null && (
+            <View style={styles.photoPickerOverlay}>
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={() => setPhotoPickerTarget(null)}
+              />
+              <View
+                style={[
+                  styles.photoPickerCard,
+                  {
+                    backgroundColor: colors.cardSurface,
+                    borderColor: colors.borderDivider,
+                  },
+                ]}
+              >
+                <View style={styles.photoPickerHandle} />
+                <Text
+                  style={[
+                    styles.photoPickerTitle,
+                    { color: colors.primaryTextDark },
+                  ]}
+                >
+                  {t.updateProfilePhotoTitle}
+                </Text>
+                <Text
+                  style={[
+                    styles.photoPickerSub,
+                    { color: colors.secondaryMutedText },
+                  ]}
+                >
+                  {t.updateProfilePhotoPrompt}
+                </Text>
+
+                <View style={styles.photoOptionsGrid}>
+                  <Pressable
+                    onPress={() => {
+                      const isLogged = photoPickerTarget === "LOGGED_IN";
+                      setPhotoPickerTarget(null);
+                      setTimeout(() => {
+                        void launchPhotoSource("CAMERA", isLogged);
+                      }, 150);
+                    }}
+                    style={({ pressed }) => [
+                      styles.photoOptionBox,
+                      {
+                        backgroundColor: colors.pageBackgroundGrey,
+                        borderColor: colors.borderDivider,
+                        opacity: pressed ? 0.8 : 1,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.photoOptionIconCircle,
+                        { backgroundColor: "#DBEAFE" },
+                      ]}
+                    >
+                      <Ionicons
+                        name="camera"
+                        size={26}
+                        color={colors.primaryBlue}
+                      />
+                    </View>
+                    <Text
+                      style={[
+                        styles.photoOptionLabel,
+                        { color: colors.primaryTextDark },
+                      ]}
+                    >
+                      {t.takePhotoOption.replace("📷 ", "")}
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => {
+                      const isLogged = photoPickerTarget === "LOGGED_IN";
+                      setPhotoPickerTarget(null);
+                      setTimeout(() => {
+                        void launchPhotoSource("GALLERY", isLogged);
+                      }, 150);
+                    }}
+                    style={({ pressed }) => [
+                      styles.photoOptionBox,
+                      {
+                        backgroundColor: colors.pageBackgroundGrey,
+                        borderColor: colors.borderDivider,
+                        opacity: pressed ? 0.8 : 1,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.photoOptionIconCircle,
+                        { backgroundColor: "#DCFCE7" },
+                      ]}
+                    >
+                      <Ionicons
+                        name="images"
+                        size={26}
+                        color={colors.primaryGreen}
+                      />
+                    </View>
+                    <Text
+                      style={[
+                        styles.photoOptionLabel,
+                        { color: colors.primaryTextDark },
+                      ]}
+                    >
+                      {t.chooseFromGalleryOption.replace("🖼️ ", "")}
+                    </Text>
+                  </Pressable>
+                </View>
+
+                <Pressable
+                  onPress={() => setPhotoPickerTarget(null)}
+                  style={({ pressed }) => [
+                    styles.photoCancelBtn,
+                    {
+                      borderColor: colors.borderDivider,
+                      opacity: pressed ? 0.75 : 1,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.photoCancelText,
+                      { color: colors.secondaryMutedText },
+                    ]}
+                  >
+                    {t.cancelBtn}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -1072,6 +1194,83 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   logoutBtnText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
+  },
+  photoPickerOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "flex-end",
+    zIndex: 50,
+  },
+  photoPickerCard: {
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderTopWidth: 1,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 28,
+    alignItems: "center",
+  },
+  photoPickerHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(150,150,150,0.35)",
+    marginBottom: 14,
+  },
+  photoPickerTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 17,
+    marginBottom: 4,
+  },
+  photoPickerSub: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    textAlign: "center",
+    marginBottom: 18,
+  },
+  photoOptionsGrid: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+    marginBottom: 16,
+  },
+  photoOptionBox: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  photoOptionIconCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoOptionLabel: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
+    textAlign: "center",
+  },
+  photoCancelBtn: {
+    width: "100%",
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoCancelText: {
     fontFamily: "Inter_700Bold",
     fontSize: 13,
   },
