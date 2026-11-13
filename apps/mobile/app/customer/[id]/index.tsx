@@ -1,5 +1,5 @@
 // apps/mobile/app/customer/[id]/index.tsx
-import React, { useCallback, useState, useEffect, useRef } from "react";
+import React, { useCallback, useState, useEffect, useRef, useMemo } from "react";
 import {
   Platform,
   Pressable,
@@ -142,6 +142,20 @@ const [customer, setCustomer] = useState<CustomerRow | null>(null);
     }
   };
 
+  const dailyTotals = useMemo(() => {
+    const totals: Record<string, { gave: number; got: number; count: number }> =
+      {};
+    entries.forEach((e) => {
+      if (!totals[e.entry_date]) {
+        totals[e.entry_date] = { gave: 0, got: 0, count: 0 };
+      }
+      totals[e.entry_date].count += 1;
+      if (e.type === "GAVE") totals[e.entry_date].gave += e.amount;
+      else totals[e.entry_date].got += e.amount;
+    });
+    return totals;
+  }, [entries]);
+
   if (!customer) return null;
 
   const settled = isSettled(customer.net_balance);
@@ -257,13 +271,13 @@ const [customer, setCustomer] = useState<CustomerRow | null>(null);
         </View>
       </View>
 
-      {/* 3-Column Sticky Header */}
+      {/* 3-Column Sticky Header (Rounded Card matching Cashbook) */}
       <View
         style={[
           styles.columnHeader,
           {
             backgroundColor: colors.cardSurface,
-            borderBottomColor: colors.borderDivider,
+            borderColor: colors.borderDivider,
           },
         ]}
       >
@@ -295,162 +309,276 @@ const [customer, setCustomer] = useState<CustomerRow | null>(null);
         </View>
       </View>
 
-{/* Entries List */}
+      {/* Entries List */}
       <View style={styles.listContainer}>
         <FlashList
           ref={flashListRef}
           data={entries}
           keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 74 }}
           renderItem={({ item, index }) => {
-            // Check if date header should be shown (if previous item has a different date)
             const showDateHeader =
               index === 0 || entries[index - 1].entry_date !== item.entry_date;
+            const nextItem = entries[index + 1];
+            const isLastOfDate =
+              !nextItem || nextItem.entry_date !== item.entry_date;
+            const dTotals = dailyTotals[item.entry_date];
 
             return (
               <View>
                 {showDateHeader && (
-                  <View style={styles.dateHeaderContainer}>
-                    <Pressable
-                      onPress={() => handleOpenDatePicker(item.entry_date)}
-                      style={({ pressed }) => [
-                        styles.dateHeaderPill,
-                        {
-                          backgroundColor: colors.cardSurface,
-                          borderColor: colors.borderDivider,
-                          borderWidth: 1,
-                          opacity: pressed ? 0.75 : 1,
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name="calendar-outline"
-                        size={13}
-                        color={colors.primaryBlue}
-                      />
-                      <Text
-                        style={[
-                          styles.dateHeaderText,
-                          { color: colors.primaryTextDark },
-                        ]}
-                      >
-                        {item.entry_date}
-                      </Text>
-                    </Pressable>
+                  <View style={styles.dateHeaderRow}>
+                    <View style={styles.colEntries}>
+                      <View style={styles.datePillAndCountRow}>
+                        <Pressable
+                          onPress={() => handleOpenDatePicker(item.entry_date)}
+                          style={({ pressed }) => [
+                            styles.dateHeaderPill,
+                            {
+                              backgroundColor: colors.cardSurface,
+                              borderColor: colors.borderDivider,
+                              borderWidth: 1,
+                              opacity: pressed ? 0.75 : 1,
+                            },
+                          ]}
+                        >
+                          <Ionicons
+                            name="calendar-outline"
+                            size={12}
+                            color={colors.primaryBlue}
+                          />
+                          <Text
+                            style={[
+                              styles.dateHeaderText,
+                              { color: colors.primaryTextDark },
+                            ]}
+                          >
+                            {item.entry_date}
+                          </Text>
+                        </Pressable>
+
+                        <View
+                          style={[
+                            styles.dateCountBadge,
+                            {
+                              backgroundColor: colors.cardSurface,
+                              borderColor: colors.borderDivider,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.dateCountText,
+                              { color: colors.secondaryMutedText },
+                            ]}
+                          >
+                            {dTotals?.count || 0} {t.entriesCountLabel}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={styles.colGave}>
+                      {dTotals && dTotals.gave > 0 ? (
+                        <View
+                          style={[
+                            styles.subtotalBadge,
+                            {
+                              backgroundColor: colors.lightPinkColumnTint,
+                              borderColor: colors.primaryRed,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.dateTotalText,
+                              { color: colors.primaryRed },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            -{" "}
+                            {formatCurrency(
+                              dTotals.gave,
+                              activeBusinessCurrency,
+                              true,
+                            )}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+
+                    <View style={styles.colGot}>
+                      {dTotals && dTotals.got > 0 ? (
+                        <View
+                          style={[
+                            styles.subtotalBadge,
+                            {
+                              backgroundColor: colors.lightGreenBadgeTint,
+                              borderColor: colors.primaryGreen,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.dateTotalText,
+                              { color: colors.primaryGreen },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            +{" "}
+                            {formatCurrency(
+                              dTotals.got,
+                              activeBusinessCurrency,
+                              true,
+                            )}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
                 )}
 
-                <Pressable
-                  onPress={() =>
-                    router.push(
-                      `/customer/${customer.id}/entry/${item.id}` as never,
-                    )
-                  }
-                  style={({ pressed }) => [
-                    styles.entryRow,
-                    {
-                      backgroundColor: colors.cardSurface,
-                      borderBottomColor: colors.borderDivider,
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}
+                <View
+                  style={{
+                    borderTopLeftRadius: showDateHeader ? 12 : 0,
+                    borderTopRightRadius: showDateHeader ? 12 : 0,
+                    borderBottomLeftRadius: isLastOfDate ? 12 : 0,
+                    borderBottomRightRadius: isLastOfDate ? 12 : 0,
+                    borderTopWidth: showDateHeader ? 1 : 0,
+                    borderBottomWidth: isLastOfDate ? 1 : 0,
+                    borderLeftWidth: 1,
+                    borderRightWidth: 1,
+                    borderColor: colors.borderDivider,
+                    marginBottom: isLastOfDate ? 8 : 0,
+                    overflow: "hidden",
+                  }}
                 >
-                  <View style={styles.colEntriesData}>
-                    <Text
-                      style={[
-                        styles.entryTime,
-                        { color: colors.secondaryMutedText },
-                      ]}
-                    >
-                      {item.entry_date} • {item.entry_time}
-                    </Text>
-
-                    <View
-                      style={[
-                        styles.runningBalancePill,
-                        {
-                          backgroundColor:
-                            item.running_balance >= 0
-                              ? colors.lightGreenBadgeTint
-                              : colors.lightPinkColumnTint,
-                        },
-                      ]}
-                    >
+                  <Pressable
+                    onPress={() =>
+                      router.push(
+                        `/customer/${customer.id}/entry/${item.id}` as never,
+                      )
+                    }
+                    style={({ pressed }) => [
+                      styles.entryRow,
+                      {
+                        backgroundColor: colors.cardSurface,
+                        borderBottomColor: colors.borderDivider,
+                        borderBottomWidth: isLastOfDate ? 0 : 1,
+                        opacity: pressed ? 0.7 : 1,
+                      },
+                    ]}
+                  >
+                    <View style={styles.colEntriesData}>
                       <Text
                         style={[
-                          styles.runningBalanceText,
-                          {
-                            color:
+                          styles.entryTime,
+                          { color: colors.secondaryMutedText },
+                        ]}
+                      >
+                        {item.entry_time}
+                      </Text>
+
+                      {/* Enlarged Running Balance Pill (+2px larger on the final/latest transaction of each day) */}
+                      <View
+                        style={[
+                          styles.runningBalancePill,
+                          showDateHeader && {
+                            paddingHorizontal: 10,
+                            paddingVertical: 4,
+                            borderWidth: 0.8,
+                            borderColor:
                               item.running_balance >= 0
                                 ? colors.primaryGreen
                                 : colors.primaryRed,
                           },
+                          {
+                            backgroundColor:
+                              item.running_balance >= 0
+                                ? colors.lightGreenBadgeTint
+                                : colors.lightPinkColumnTint,
+                          },
                         ]}
                       >
-                        {t.balPrefix}{" "}
-                        {formatSignedCurrency(
-                          item.running_balance,
-                          activeBusinessCurrency,
-                        )}
-                      </Text>
+                        <Text
+                          style={[
+                            styles.runningBalanceText,
+                            showDateHeader && { fontSize: 14 },
+                            {
+                              color:
+                                item.running_balance >= 0
+                                  ? colors.primaryGreen
+                                  : colors.primaryRed,
+                            },
+                          ]}
+                        >
+                          {t.balPrefix}{" "}
+                          {formatSignedCurrency(
+                            item.running_balance,
+                            activeBusinessCurrency,
+                          )}
+                        </Text>
+                      </View>  
+
+                      {item.details ? (
+                        <Text
+                          style={[
+                            styles.entryDetails,
+                            { color: colors.primaryTextDark },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {item.details}
+                        </Text>
+                      ) : null}
                     </View>
-                    {item.details ? (
-                      <Text
-                        style={[
-                          styles.entryDetails,
-                          { color: colors.primaryTextDark },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {item.details}
-                      </Text>
-                    ) : null}
-                  </View>
 
-                  <View
-                    style={[
-                      styles.colGaveData,
-                      { backgroundColor: colors.lightPinkColumnTint },
-                    ]}
-                  >
-                    {item.type === "GAVE" ? (
-                      <Text
-                        style={[
-                          styles.entryAmount,
-                          { color: colors.primaryRed },
-                        ]}
-                      >
-                        {formatCurrency(
-                          item.amount,
-                          activeBusinessCurrency,
-                          true,
-                        )}
-                      </Text>
-                    ) : null}
-                  </View>
+                    <View
+                      style={[
+                        styles.colGaveData,
+                        { backgroundColor: colors.lightPinkColumnTint },
+                      ]}
+                    >
+                      {item.type === "GAVE" ? (
+                        <Text
+                          style={[
+                            styles.entryAmount,
+                            { color: colors.primaryRed },
+                          ]}
+                        >
+                          {formatCurrency(
+                            item.amount,
+                            activeBusinessCurrency,
+                            true,
+                          )}
+                        </Text>
+                      ) : null}
+                    </View>
 
-                  <View style={styles.colGotData}>
-                    {item.type === "GOT" ? (
-                      <Text
-                        style={[
-                          styles.entryAmount,
-                          { color: colors.primaryGreen },
-                        ]}
-                      >
-                        {formatCurrency(
-                          item.amount,
-                          activeBusinessCurrency,
-                          true,
-                        )}
-                      </Text>
-                    ) : null}
-                  </View>
-                </Pressable>
+                    <View style={styles.colGotData}>
+                      {item.type === "GOT" ? (
+                        <Text
+                          style={[
+                            styles.entryAmount,
+                            { color: colors.primaryGreen },
+                          ]}
+                        >
+                          {formatCurrency(
+                            item.amount,
+                            activeBusinessCurrency,
+                            true,
+                          )}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                </View>
               </View>
             );
           }}
-      />
+        />
       </View>
-
+      
       {showCalendarPicker && (
         <DateTimePicker
           value={pickerDate}
@@ -466,16 +594,8 @@ const [customer, setCustomer] = useState<CustomerRow | null>(null);
         />
       )}
 
-      {/* Bottom Action Buttons */}
-      <View
-        style={[
-          styles.bottomBar,
-          {
-            backgroundColor: colors.cardSurface,
-            borderTopColor: colors.borderDivider,
-          },
-        ]}
-      >
+{/* Bottom Floating Action Buttons (matching Cashbook) */}
+      <View style={styles.bottomBar} pointerEvents="box-none">
         <Pressable
           onPress={() =>
             router.push(
@@ -484,7 +604,7 @@ const [customer, setCustomer] = useState<CustomerRow | null>(null);
           }
           style={[
             styles.actionBtn,
-            { backgroundColor: colors.primaryRed, marginRight: 6 },
+            { backgroundColor: colors.primaryRed, marginRight: 5 },
           ]}
         >
           <Text style={styles.actionBtnText}>
@@ -497,7 +617,7 @@ const [customer, setCustomer] = useState<CustomerRow | null>(null);
           }
           style={[
             styles.actionBtn,
-            { backgroundColor: colors.primaryGreen, marginLeft: 6 },
+            { backgroundColor: colors.primaryGreen, marginLeft: 5 },
           ]}
         >
           <Text style={styles.actionBtnText}>
@@ -557,10 +677,10 @@ const styles = StyleSheet.create({
   balanceCard: {
     position: "absolute",
     bottom: -24,
-    left: 16,
-    right: 16,
-    borderRadius: 8,
-    paddingTop: 16,
+    left: 12,
+    right: 12,
+    borderRadius: 12,
+    paddingTop: 14,
     elevation: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -572,82 +692,134 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 14,
   },
   settledRow: { flexDirection: "row", alignItems: "center" },
-  balanceLabel: { fontFamily: "Inter_500Medium", fontSize: 13 },
-  balanceAmount: { fontFamily: "Inter_700Bold", fontSize: 18 },
+  balanceLabel: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  balanceAmount: { fontFamily: "Inter_700Bold", fontSize: 22 },
   reportBtnBorder: { borderTopWidth: 1 },
   reportBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
+    paddingVertical: 11,
     gap: 6,
   },
-  reportBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
-  columnHeader: { flexDirection: "row", marginTop: 36, borderBottomWidth: 1 },
+  reportBtnText: { fontFamily: "Inter_700Bold", fontSize: 13 },
+  columnHeader: {
+    flexDirection: "row",
+    marginTop: 34,
+    marginHorizontal: 12,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
   colHeaderText: {
     fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    fontSize: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     textAlign: "right",
   },
   colEntries: { flex: 2, alignItems: "flex-start" },
   colGave: { flex: 1, alignItems: "flex-end" },
   colGot: { flex: 1, alignItems: "flex-end" },
   listContainer: { flex: 1 },
-  dateHeaderContainer: { alignItems: "center", marginVertical: 12 },
+  dateHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingTop: 10,
+    paddingBottom: 6,
+    paddingHorizontal: 2,
+  },
+  datePillAndCountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
   dateHeaderPill: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 14,
-    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 5,
   },
-  dateHeaderText: { fontFamily: "Inter_600SemiBold", fontSize: 11 },
-  entryRow: { flexDirection: "row", borderBottomWidth: 1 },
+  dateHeaderText: { fontFamily: "Inter_700Bold", fontSize: 11 },
+  dateCountBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  dateCountText: { fontFamily: "Inter_600SemiBold", fontSize: 10 },
+  subtotalBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 0.8,
+  },
+  dateTotalText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 11,
+  },
+  entryRow: { flexDirection: "row", minHeight: 62 },
   colEntriesData: {
     flex: 2,
-    padding: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     justifyContent: "center",
     alignItems: "flex-start",
   },
   colGaveData: {
     flex: 1,
-    padding: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     justifyContent: "center",
     alignItems: "flex-end",
   },
   colGotData: {
     flex: 1,
-    padding: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     justifyContent: "center",
     alignItems: "flex-end",
   },
-  entryTime: { fontFamily: "Inter_400Regular", fontSize: 11, marginBottom: 6 },
+  entryTime: { fontFamily: "Inter_500Medium", fontSize: 12, marginBottom: 5 },
   runningBalancePill: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     marginBottom: 4,
   },
-  runningBalanceText: { fontFamily: "Inter_600SemiBold", fontSize: 10 },
-  entryDetails: { fontFamily: "Inter_400Regular", fontSize: 12 },
-  entryAmount: { fontFamily: "Inter_700Bold", fontSize: 14 },
-  bottomBar: { flexDirection: "row", padding: 12, borderTopWidth: 1 },
+  runningBalanceText: { fontFamily: "Inter_700Bold", fontSize: 12 },
+  entryDetails: { fontFamily: "Inter_500Medium", fontSize: 13 },
+  entryAmount: { fontFamily: "Inter_700Bold", fontSize: 15 },
+  bottomBar: {
+    position: "absolute",
+    bottom: 10,
+    left: 12,
+    right: 12,
+    flexDirection: "row",
+  },
   actionBtn: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
   },
   actionBtnText: {
     color: "#FFFFFF",
     fontFamily: "Inter_700Bold",
     fontSize: 14,
+    letterSpacing: 0.5,
   },
 });

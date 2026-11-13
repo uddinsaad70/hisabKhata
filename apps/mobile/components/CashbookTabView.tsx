@@ -195,9 +195,9 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
           getItemType={(item) =>
             item.id === "__STICKY_TABLE_HEADER__" ? "stickyHeader" : "row"
           }
-          ListHeaderComponent={
+ListHeaderComponent={
             <View>
-              {/* Side-by-Side Cards (Total & Today) — Scrolls away smoothly */}
+              {/* Side-by-Side Cards (Total & Today) — Enlarged to fill top void */}
               <View style={styles.cardsRow}>
                 {/* Total Balance Card */}
                 <View
@@ -255,6 +255,8 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
                           styles.splitValue,
                           { color: colors.primaryTextDark },
                         ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
                       >
                         {formatSignedCurrency(
                           summary?.total_cash || 0,
@@ -262,6 +264,12 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
                         )}
                       </Text>
                     </View>
+                    <View
+                      style={[
+                        styles.splitVerticalDivider,
+                        { backgroundColor: colors.borderDivider },
+                      ]}
+                    />
                     <View style={styles.splitCol}>
                       <Text
                         style={[
@@ -276,6 +284,8 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
                           styles.splitValue,
                           { color: colors.primaryTextDark },
                         ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
                       >
                         {formatSignedCurrency(
                           summary?.total_online || 0,
@@ -342,6 +352,8 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
                           styles.splitValue,
                           { color: colors.primaryTextDark },
                         ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
                       >
                         {formatSignedCurrency(
                           summary?.today_cash || 0,
@@ -349,6 +361,12 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
                         )}
                       </Text>
                     </View>
+                    <View
+                      style={[
+                        styles.splitVerticalDivider,
+                        { backgroundColor: colors.borderDivider },
+                      ]}
+                    />
                     <View style={styles.splitCol}>
                       <Text
                         style={[
@@ -363,6 +381,8 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
                           styles.splitValue,
                           { color: colors.primaryTextDark },
                         ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
                       >
                         {formatSignedCurrency(
                           summary?.today_online || 0,
@@ -376,11 +396,18 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
 
               <Pressable
                 onPress={() => router.push("/cashbook/report" as never)}
-                style={styles.reportBtnMain}
+                style={({ pressed }) => [
+                  styles.reportBtnMain,
+                  {
+                    backgroundColor: colors.cardSurface,
+                    borderColor: colors.borderDivider,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
               >
                 <Ionicons
                   name="document-text-outline"
-                  size={16}
+                  size={17}
                   color={colors.primaryBlue}
                 />
                 <Text
@@ -391,6 +418,11 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
                 >
                   {t.viewCashbookReport}
                 </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color={colors.primaryBlue}
+                />
               </Pressable>
             </View>
           }
@@ -683,7 +715,7 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
 
                 <View
                   style={{
-                    marginHorizontal: 12,
+                    marginHorizontal: 0,
                     borderTopLeftRadius: showDateHeader ? 12 : 0,
                     borderTopRightRadius: showDateHeader ? 12 : 0,
                     borderBottomLeftRadius: isLastOfDate ? 12 : 0,
@@ -773,38 +805,65 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
 const styles = StyleSheet.create({
   root: { flex: 1 },
   scrollContent: { flex: 1 },
-  cardsRow: { flexDirection: "row", gap: 8, padding: 12, paddingBottom: 0 },
-  halfCard: { flex: 1, borderWidth: 1, borderRadius: 8, overflow: "hidden" },
+  cardsRow: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 0,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  halfCard: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    overflow: "hidden",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+  },
   cardTitle: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
     textAlign: "center",
-    paddingTop: 12,
+    paddingTop: 14,
     paddingBottom: 4,
   },
   mainAmount: {
     fontFamily: "Inter_700Bold",
-    fontSize: 18,
+    fontSize: 22,
     textAlign: "center",
-    paddingBottom: 12,
+    paddingHorizontal: 8,
+    paddingBottom: 14,
   },
-  splitRow: { flexDirection: "row", borderTopWidth: 1, paddingVertical: 8 },
-  splitCol: { flex: 1, alignItems: "center" },
-  splitLabel: { fontFamily: "Inter_400Regular", fontSize: 9, marginBottom: 2 },
-  splitValue: { fontFamily: "Inter_600SemiBold", fontSize: 11 },
+  splitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderTopWidth: 1,
+    paddingVertical: 10,
+  },
+  splitCol: { flex: 1, alignItems: "center", paddingHorizontal: 4 },
+  splitVerticalDivider: { width: 1, height: "80%" },
+  splitLabel: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 11,
+    marginBottom: 3,
+  },
+  splitValue: { fontFamily: "Inter_700Bold", fontSize: 13 },
   reportBtnMain: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    marginHorizontal: 12,
-    marginBottom: 12,
+    paddingVertical: 11,
+    marginBottom: 8,
+    borderRadius: 10,
+    borderWidth: 1,
     gap: 6,
   },
-  reportBtnMainText: { fontFamily: "Inter_700Bold", fontSize: 12 },
+  reportBtnMainText: { fontFamily: "Inter_700Bold", fontSize: 13 },
   columnHeader: {
     flexDirection: "row",
-    marginHorizontal: 12,
     borderWidth: 1,
     borderRadius: 10,
     overflow: "hidden",
@@ -823,7 +882,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingTop: 10,
     paddingBottom: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 2,
     alignItems: "center",
   },
   datePillAndCountRow: {
@@ -865,7 +924,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginHorizontal: 12,
     marginBottom: 6,
     paddingHorizontal: 10,
     paddingVertical: 7,
@@ -890,7 +948,7 @@ const styles = StyleSheet.create({
   },
   minimizedValue: {
     fontFamily: "Inter_700Bold",
-    fontSize: 11,
+    fontSize: 16,
   },
   minimizedDivider: {
     width: 1,
@@ -916,8 +974,8 @@ const styles = StyleSheet.create({
   bottomBar: {
     position: "absolute",
     bottom: 6,
-    left: 10,
-    right: 10,
+    left: 0,
+    right: 0,
     flexDirection: "row",
   },
   actionBtn: {
