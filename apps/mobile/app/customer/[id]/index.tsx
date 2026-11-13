@@ -134,11 +134,9 @@ const [customer, setCustomer] = useState<CustomerRow | null>(null);
       }
     } else {
       Alert.alert(
-        language === "bn" ? "কোনো লেনদেন নেই" : "No Transactions",
-        language === "bn"
-          ? `${targetDateStr} তারিখে এই কাস্টমারের কোনো লেনদেন পাওয়া যায়নি।`
-          : `No transactions found for this customer on ${targetDateStr}.`,
-      );
+      t.noTransactionsOnDateTitle,
+      `${t.noCustomerTransactionsOnDateMsg} ${targetDateStr}`,
+    );
     }
   };
 

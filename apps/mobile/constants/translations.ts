@@ -220,6 +220,24 @@ export const TRANSLATIONS = {
     accountDeletedMsg:
       "Your account and cloud data have been permanently deleted.",
     transactionSavedTitle: "Transaction Saved!",
+
+    // Camera, Business Delete & Calendar Alerts (Zero Hardcoding)
+    updateProfilePhotoTitle: "Update Profile Photo",
+    updateProfilePhotoPrompt: "Choose how you would like to set your profile photo:",
+    chooseFromGalleryOption: "🖼️ Choose from Gallery",
+    takePhotoOption: "📷 Take Photo",
+    cameraPermTitle: "Camera Permission Required",
+    cameraPermMsg: "Please allow camera access to take a profile photo.",
+    galleryPermTitle: "Gallery Permission Required",
+    galleryPermMsg: "Please allow photo library access to select a profile photo.",
+    deleteBusinessConfirmTitle: "Delete Business?",
+    deleteBusinessConfirmMsg:
+      "Are you sure you want to delete this business and all of its customers and transactions?",
+    cannotDeleteOnlyBusinessMsg: "You must keep at least one active business.",
+    enterBusinessNameError: "Please enter a business name.",
+    noTransactionsOnDateTitle: "No Transactions",
+    noCustomerTransactionsOnDateMsg: "No transactions found for this customer on",
+    noCashbookEntriesOnDateMsg: "No cashbook entries found on",
   },
   bn: {
     // 1. Bottom Tab & Top Header Navigation
@@ -438,6 +456,24 @@ export const TRANSLATIONS = {
     accountDeletedMsg:
       "আপনার অ্যাকাউন্ট এবং ক্লাউড ডেটা স্থায়ীভাবে মুছে ফেলা হয়েছে।",
     transactionSavedTitle: "লেনদেন সেভ হয়েছে!",
+
+    // Camera, Business Delete & Calendar Alerts (Zero Hardcoding)
+    updateProfilePhotoTitle: "প্রোফাইল ছবি পরিবর্তন",
+    updateProfilePhotoPrompt: "আপনি কীভাবে প্রোফাইল ছবি যুক্ত করতে চান?",
+    chooseFromGalleryOption: "🖼️ গ্যালারি থেকে নিন",
+    takePhotoOption: "📷 ক্যামেরায় ছবি তুলুন",
+    cameraPermTitle: "ক্যামেরা পারমিশন প্রয়োজন",
+    cameraPermMsg: "সরাসরি ছবি তোলার জন্য ক্যামেরা ব্যবহারের অনুমতি দিন।",
+    galleryPermTitle: "গ্যালারি পারমিশন প্রয়োজন",
+    galleryPermMsg: "গ্যালারি থেকে ছবি নেওয়ার জন্য অনুমতি দিন।",
+    deleteBusinessConfirmTitle: "ব্যবসা ডিলিট করবেন?",
+    deleteBusinessConfirmMsg:
+      "আপনি কি নিশ্চিতভাবে এই ব্যবসা এবং এর অধীনের সমস্ত কাস্টমার ও লেনদেন মুছে ফেলতে চান?",
+    cannotDeleteOnlyBusinessMsg: "অন্তত একটি সক্রিয় ব্যবসা রাখা আবশ্যক।",
+    enterBusinessNameError: "অনুগ্রহ করে ব্যবসার নাম লিখুন।",
+    noTransactionsOnDateTitle: "কোনো লেনদেন নেই",
+    noCustomerTransactionsOnDateMsg: "এই তারিখে এই কাস্টমারের কোনো লেনদেন পাওয়া যায়নি:",
+    noCashbookEntriesOnDateMsg: "এই তারিখে ক্যাশবুকে কোনো লেনদেন পাওয়া যায়নি:",
   },
 } as const;
 

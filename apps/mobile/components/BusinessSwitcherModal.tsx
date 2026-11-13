@@ -1,7 +1,8 @@
 // apps/mobile/components/BusinessSwitcherModal.tsx
-import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  DeviceEventEmitter,
   Modal,
   Pressable,
   ScrollView,
@@ -15,12 +16,14 @@ import { getDbAdapter } from "../db/client";
 import {
   type BusinessWithCount,
   createBusiness,
+  deleteBusiness,
   getAllBusinesses,
 } from "../db/businessQueries";
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
 import { type CurrencyCode } from "../utils/formatCurrency";
 import { getStrings } from "../constants/translations";
+import { useEffect, useState } from "react";
 
 export interface BusinessSwitcherModalProps {
   visible: boolean;
@@ -78,7 +81,7 @@ export function BusinessSwitcherModal({
   const handleCreateBusiness = async () => {
     const trimmed = newName.trim();
     if (!trimmed) {
-      setErrorMsg("Please enter a business name.");
+      setErrorMsg(t.enterBusinessNameError);
       return;
     }
 
@@ -92,6 +95,7 @@ export function BusinessSwitcherModal({
       });
 
       setActiveBusiness(created.id, created.name, created.currency);
+      DeviceEventEmitter.emit("LOCAL_DATA_MUTATED");
       onClose();
     } catch (err) {
       setErrorMsg(
@@ -101,6 +105,54 @@ export function BusinessSwitcherModal({
     }
   };
 
+
+  const handleDeleteBusiness = (biz: BusinessWithCount) => {
+    if (businesses.length <= 1) {
+      Alert.alert(t.deleteBusinessConfirmTitle, t.cannotDeleteOnlyBusinessMsg);
+      return;
+    }
+
+    Alert.alert(
+      t.deleteBusinessConfirmTitle,
+      `${biz.name} — ${t.deleteBusinessConfirmMsg}`,
+      [
+        { text: t.cancelBtn, style: "cancel" },
+        {
+          text: t.deleteBtn,
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              const db = await getDbAdapter();
+              const nextActive = await deleteBusiness(db, biz.id);
+              const updatedList = await getAllBusinesses(db);
+              setBusinesses(updatedList);
+
+              if (biz.id === activeBusinessId && nextActive) {
+                setActiveBusiness(
+                  nextActive.id,
+                  nextActive.name,
+                  nextActive.currency,
+                );
+              }
+
+              DeviceEventEmitter.emit("WORKSPACE_RESET");
+              DeviceEventEmitter.emit("LOCAL_DATA_MUTATED");
+            } catch (err) {
+              setErrorMsg(
+                err instanceof Error
+                  ? err.message
+                  : "Failed to delete business.",
+              );
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+  
   return (
     <Modal
       visible={visible}
@@ -321,19 +373,43 @@ export function BusinessSwitcherModal({
                         </Text>
                       </View>
 
-                      {isActive ? (
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={24}
-                          color={colors.primaryGreen}
-                        />
-                      ) : (
-                        <Ionicons
-                          name="ellipse-outline"
-                          size={22}
-                          color={colors.secondaryMutedText}
-                        />
-                      )}
+<View style={styles.rightActionsRow}>
+                        {businesses.length > 1 && (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`Delete ${biz.name}`}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleDeleteBusiness(biz);
+                            }}
+                            hitSlop={10}
+                            style={[
+                              styles.deleteBizBtn,
+                              { backgroundColor: colors.lightPinkColumnTint },
+                            ]}
+                          >
+                            <Ionicons
+                              name="trash-outline"
+                              size={16}
+                              color={colors.primaryRed}
+                            />
+                          </Pressable>
+                        )}
+
+                        {isActive ? (
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={24}
+                            color={colors.primaryGreen}
+                          />
+                        ) : (
+                          <Ionicons
+                            name="ellipse-outline"
+                            size={22}
+                            color={colors.secondaryMutedText}
+                          />
+                        )}
+                      </View>
                     </Pressable>
                   );
                 })}
@@ -434,6 +510,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     marginTop: 2,
+  },
+    rightActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  deleteBizBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
   footerWrap: {
     paddingHorizontal: 20,

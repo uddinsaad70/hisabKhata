@@ -163,11 +163,9 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
       }
     } else {
       Alert.alert(
-        language === "bn" ? "কোনো লেনদেন নেই" : "No Transactions",
-        language === "bn"
-          ? `${targetDateStr} তারিখে ক্যাশবুকে কোনো লেনদেন পাওয়া যায়নি।`
-          : `No cashbook entries found on ${targetDateStr}.`,
-      );
+      t.noTransactionsOnDateTitle,
+      `${t.noCashbookEntriesOnDateMsg} ${targetDateStr}`,
+    );
     }
   };
 

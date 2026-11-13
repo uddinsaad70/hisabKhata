@@ -267,12 +267,7 @@ export function UserAccountModal({
       if (source === "CAMERA") {
         const camPerm = await ImagePicker.requestCameraPermissionsAsync();
         if (!camPerm.granted) {
-          Alert.alert(
-            language === "bn" ? "ক্যামেরা পারমিশন প্রয়োজন" : "Permission Required",
-            language === "bn"
-              ? "সরাসরি ছবি তোলার জন্য ক্যামেরা ব্যবহারের অনুমতি দিন।"
-              : "Please allow camera access to take a profile photo.",
-          );
+          Alert.alert(t.cameraPermTitle, t.cameraPermMsg);
           return;
         }
 
@@ -290,12 +285,7 @@ export function UserAccountModal({
       } else {
         const libPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!libPerm.granted) {
-          Alert.alert(
-            language === "bn" ? "গ্যালারি পারমিশন প্রয়োজন" : "Permission Required",
-            language === "bn"
-              ? "গ্যালারি থেকে ছবি নেওয়ার জন্য অনুমতি দিন।"
-              : "Please allow photo library access to select a profile photo.",
-          );
+          Alert.alert(t.galleryPermTitle, t.galleryPermMsg);
           return;
         }
 
@@ -318,28 +308,26 @@ export function UserAccountModal({
 
   const handlePickPhoto = (forLoggedInUser: boolean) => {
     Alert.alert(
-      language === "bn" ? "প্রোফাইল ছবি পরিবর্তন" : "Update Profile Photo",
-      language === "bn"
-        ? "আপনি কীভাবে প্রোফাইল ছবি যুক্ত করতে চান?"
-        : "Choose how you would like to set your profile photo:",
+      t.updateProfilePhotoTitle,
+      t.updateProfilePhotoPrompt,
       [
         {
-          text: language === "bn" ? "বাতিল" : "Cancel",
+          text: t.cancelBtn,
           style: "cancel",
         },
         {
-          text: language === "bn" ? "🖼️ গ্যালারি থেকে নিন" : "🖼️ Choose from Gallery",
+          text: t.chooseFromGalleryOption,
           onPress: () => void launchPhotoSource("GALLERY", forLoggedInUser),
         },
         {
-          text: language === "bn" ? "📷 ক্যামেরায় ছবি তুলুন" : "📷 Take Photo",
+          text: t.takePhotoOption,
           onPress: () => void launchPhotoSource("CAMERA", forLoggedInUser),
         },
       ],
       { cancelable: true },
     );
   };
-
+  
   const handleAuthSubmit = async () => {
     if (isBusy) return;
     if (!identifier.trim() || !password.trim()) {

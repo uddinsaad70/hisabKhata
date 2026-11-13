@@ -336,3 +336,53 @@ export async function clearLoggedInUserWorkspaceOnLogout(
     ownerUserId: null,
   });
 }
+
+/**
+ * Soft-deletes a business and all its associated customers, customer ledger entries,
+ * and cashbook entries (marking is_deleted = 1, is_synced = 0 so cloud sync propagates deletion).
+ * Ensures at least one active business remains. Returns the next active business.
+ */
+export async function deleteBusiness(
+  db: DatabaseAdapter,
+  businessId: string,
+): Promise<BusinessWithCount> {
+  const allActive = await getAllBusinesses(db);
+  if (allActive.length <= 1) {
+    throw new Error("CANNOT_DELETE_LAST_BUSINESS");
+  }
+
+  const now = Date.now();
+
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      `UPDATE customer_entries
+       SET is_deleted = 1, is_synced = 0, updated_at = ?
+       WHERE business_id = ? AND is_deleted = 0;`,
+      [now, businessId],
+    );
+
+    await db.runAsync(
+      `UPDATE customers
+       SET is_deleted = 1, is_synced = 0, updated_at = ?
+       WHERE business_id = ? AND is_deleted = 0;`,
+      [now, businessId],
+    );
+
+    await db.runAsync(
+      `UPDATE cashbook_entries
+       SET is_deleted = 1, is_synced = 0, updated_at = ?
+       WHERE business_id = ? AND is_deleted = 0;`,
+      [now, businessId],
+    );
+
+    await db.runAsync(
+      `UPDATE businesses
+       SET is_deleted = 1, is_synced = 0, updated_at = ?
+       WHERE id = ? AND is_deleted = 0;`,
+      [now, businessId],
+    );
+  });
+
+  const remaining = await getAllBusinesses(db);
+  return remaining[0];
+}
