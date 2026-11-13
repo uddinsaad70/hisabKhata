@@ -9,11 +9,14 @@ import {
 } from "../utils/formatCurrency";
 import { formatRelativeTime } from "../utils/dateUtils";
 import { getThemeColors, type ThemeMode } from "../constants/theme";
+import { useUiStore } from "../store/uiStore";
+import { getStrings } from "../constants/translations";
 
 export interface CustomerRowItemProps {
   customer: CustomerRow;
   currency: CurrencyCode;
   themeMode: ThemeMode;
+  isLastItem?: boolean;
   onPress: (customer: CustomerRow) => void;
 }
 
@@ -39,9 +42,12 @@ export function CustomerRowItem({
   customer,
   currency,
   themeMode,
+  isLastItem = false,
   onPress,
 }: CustomerRowItemProps) {
   const colors = getThemeColors(themeMode);
+  const language = useUiStore((state) => state.language);
+  const t = getStrings(language);
   const avatarPalette = getAvatarPalette(customer.id);
 
   const settled = isSettled(customer.net_balance);
@@ -56,8 +62,8 @@ export function CustomerRowItem({
   const balanceSubtitle = settled
     ? null
     : isYouWillGive
-      ? "You will give"
-      : "You will get";
+      ? t.youWillGive
+      : t.youWillGet;
 
   const activityTimestamp = customer.last_transaction_at ?? customer.created_at;
   const relativeTimeStr = formatRelativeTime(activityTimestamp);
@@ -72,6 +78,7 @@ export function CustomerRowItem({
         {
           backgroundColor: colors.cardSurface,
           borderBottomColor: colors.borderDivider,
+          borderBottomWidth: isLastItem ? 0 : 1,
           opacity: pressed ? 0.85 : 1,
         },
       ]}
