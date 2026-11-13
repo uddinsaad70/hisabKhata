@@ -12,7 +12,7 @@ import {
 import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import { CustomCalendarModal } from "./CustomCalendarModal";
 
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
@@ -759,20 +759,17 @@ ListHeaderComponent={
         />
       </View>
 
-      {showCalendarPicker && (
-        <DateTimePicker
-          value={pickerDate}
-          mode="date"
-          display={Platform.OS === "android" ? "calendar" : "inline"}
-          maximumDate={new Date()}
-          onChange={(event, selectedDate) => {
-            setShowCalendarPicker(false);
-            if (event.type === "set" && selectedDate) {
-              handleDateSelected(selectedDate);
-            }
-          }}
-        />
-      )}
+      <CustomCalendarModal
+      visible={showCalendarPicker}
+      initialDate={pickerDate}
+      activeDates={Object.keys(dailyTotals)}
+      maximumDate={new Date()}
+      onClose={() => setShowCalendarPicker(false)}
+      onSelectDate={(selectedDate) => {
+        setShowCalendarPicker(false);
+        handleDateSelected(selectedDate);
+      }}
+    />
 
       {/* Bottom Floating Action Buttons (snug against lower tab bar, zero wasted container box) */}
       <View style={styles.bottomBar} pointerEvents="box-none">

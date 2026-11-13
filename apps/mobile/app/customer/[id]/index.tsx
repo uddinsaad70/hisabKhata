@@ -13,7 +13,7 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { Ionicons } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import { CustomCalendarModal } from "../../../components/CustomCalendarModal";
 
 import { UndoSnackbar } from "../../../components/UndoSnackbar";
 import { useUiStore } from "../../../store/uiStore";
@@ -577,20 +577,17 @@ const [customer, setCustomer] = useState<CustomerRow | null>(null);
         />
       </View>
       
-      {showCalendarPicker && (
-        <DateTimePicker
-          value={pickerDate}
-          mode="date"
-          display={Platform.OS === "android" ? "calendar" : "inline"}
-          maximumDate={new Date()}
-          onChange={(event, selectedDate) => {
-            setShowCalendarPicker(false);
-            if (event.type === "set" && selectedDate) {
-              handleDateSelected(selectedDate);
-            }
-          }}
-        />
-      )}
+      <CustomCalendarModal
+      visible={showCalendarPicker}
+      initialDate={pickerDate}
+      activeDates={Object.keys(dailyTotals)}
+      maximumDate={new Date()}
+      onClose={() => setShowCalendarPicker(false)}
+      onSelectDate={(selectedDate) => {
+        setShowCalendarPicker(false);
+        handleDateSelected(selectedDate);
+      }}
+    />
 
 {/* Bottom Floating Action Buttons (matching Cashbook) */}
       <View style={styles.bottomBar} pointerEvents="box-none">

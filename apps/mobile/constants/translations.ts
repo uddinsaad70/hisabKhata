@@ -238,6 +238,10 @@ export const TRANSLATIONS = {
     noTransactionsOnDateTitle: "No Transactions",
     noCustomerTransactionsOnDateMsg: "No transactions found for this customer on",
     noCashbookEntriesOnDateMsg: "No cashbook entries found on",
+
+    selectDateTitle: "Select Transaction Date",
+    todayBtn: "TODAY",
+    greenDotHint: "Green dot indicates dates with transactions",
   },
   bn: {
     // 1. Bottom Tab & Top Header Navigation
@@ -474,6 +478,10 @@ export const TRANSLATIONS = {
     noTransactionsOnDateTitle: "কোনো লেনদেন নেই",
     noCustomerTransactionsOnDateMsg: "এই তারিখে এই কাস্টমারের কোনো লেনদেন পাওয়া যায়নি:",
     noCashbookEntriesOnDateMsg: "এই তারিখে ক্যাশবুকে কোনো লেনদেন পাওয়া যায়নি:",
+
+    selectDateTitle: "লেনদেনের তারিখ নির্বাচন করুন",
+    todayBtn: "আজকের তারিখ",
+    greenDotHint: "সবুজ বিন্দু থাকা তারিখগুলোতে লেনদেন রয়েছে",
   },
 } as const;
 
