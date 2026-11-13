@@ -400,21 +400,18 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
               return (
                 <View
                   style={{
-                    backgroundColor: colors.cardSurface,
-                    elevation: isScrolledDown ? 3 : 0,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: isScrolledDown ? 0.08 : 0,
-                    shadowRadius: 3,
+                    backgroundColor: colors.pageBackgroundGrey,
+                    paddingTop: isScrolledDown ? 4 : 0,
+                    paddingBottom: 4,
                   }}
                 >
                   {isScrolledDown && (
                     <View
                       style={[
-                        styles.minimizedBar,
+                        styles.minimizedBarCard,
                         {
                           backgroundColor: colors.cardSurface,
-                          borderBottomColor: colors.borderDivider,
+                          borderColor: colors.borderDivider,
                         },
                       ]}
                     >
@@ -526,7 +523,7 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
                       styles.columnHeader,
                       {
                         backgroundColor: colors.cardSurface,
-                        borderBottomColor: colors.borderDivider,
+                        borderColor: colors.borderDivider,
                       },
                     ]}
                   >
@@ -570,10 +567,13 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
               );
             }
 
-            // Regular Cashbook Entries (starting at index 1)
+// Regular Cashbook Entries (starting at index 1)
             const prevItem = listDataWithStickyHeader[index - 1];
+            const nextItem = listDataWithStickyHeader[index + 1];
             const showDateHeader =
               index === 1 || prevItem.entry_date !== item.entry_date;
+            const isLastOfDate =
+              !nextItem || nextItem.entry_date !== item.entry_date;
             const dTotals = dailyTotals[item.entry_date];
 
             return (
@@ -582,82 +582,132 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
                   <View
                     style={[
                       styles.dateHeaderRow,
-                      {
-                        backgroundColor: colors.pageBackgroundGrey,
-                        borderBottomColor: colors.borderDivider,
-                      },
+                      { backgroundColor: colors.pageBackgroundGrey },
                     ]}
                   >
                     <View style={styles.colEntriesHeader}>
-                      <Pressable
-                        onPress={() => handleOpenDatePicker(item.entry_date)}
-                        style={({ pressed }) => [
-                          styles.dateHeaderPill,
+                      <View style={styles.datePillAndCountRow}>
+                        <Pressable
+                          onPress={() => handleOpenDatePicker(item.entry_date)}
+                          style={({ pressed }) => [
+                            styles.dateHeaderPill,
+                            {
+                              backgroundColor: colors.cardSurface,
+                              borderColor: colors.borderDivider,
+                              borderWidth: 1,
+                              opacity: pressed ? 0.75 : 1,
+                            },
+                          ]}
+                        >
+                          <Ionicons
+                            name="calendar-outline"
+                            size={12}
+                            color={colors.primaryBlue}
+                          />
+                          <Text
+                            style={[
+                              styles.dateHeaderText,
+                              { color: colors.primaryTextDark },
+                            ]}
+                          >
+                            {item.entry_date}
+                          </Text>
+                        </Pressable>
+
+                        <View
+                          style={[
+                            styles.dateCountBadge,
+                            {
+                              backgroundColor: colors.cardSurface,
+                              borderColor: colors.borderDivider,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.dateCountText,
+                              { color: colors.secondaryMutedText },
+                            ]}
+                          >
+                            {dTotals?.count || 0} {t.entriesCountLabel}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={styles.colOutHeader}>
+                      <View
+                        style={[
+                          styles.subtotalBadge,
                           {
-                            backgroundColor: colors.cardSurface,
-                            borderColor: colors.borderDivider,
-                            borderWidth: 1,
-                            opacity: pressed ? 0.75 : 1,
+                            backgroundColor: colors.lightPinkColumnTint,
+                            borderColor: colors.primaryRed,
                           },
                         ]}
                       >
-                        <Ionicons
-                          name="calendar-outline"
-                          size={12}
-                          color={colors.primaryBlue}
-                        />
                         <Text
                           style={[
-                            styles.dateHeaderText,
-                            { color: colors.primaryTextDark },
+                            styles.dateTotalText,
+                            { color: colors.primaryRed },
                           ]}
+                          numberOfLines={1}
                         >
-                          {item.entry_date}
+                          - {formatCurrency(dTotals?.out || 0, currency, true)}
                         </Text>
-                      </Pressable>
-                      <Text
-                        style={[
-                          styles.dateCountText,
-                          { color: colors.secondaryMutedText },
-                        ]}
-                      >
-                        {dTotals?.count || 0} {t.entriesCountLabel}
-                      </Text>
+                      </View>
                     </View>
-                    <View
-                      style={[
-                        styles.colOutHeader,
-                        { backgroundColor: colors.pageBackgroundGrey },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.dateTotalText,
-                          { color: colors.primaryRed },
-                        ]}
-                      >
-                        {formatCurrency(dTotals?.out || 0, currency, true)}
-                      </Text>
-                    </View>
+
                     <View style={styles.colInHeader}>
-                      <Text
+                      <View
                         style={[
-                          styles.dateTotalText,
-                          { color: colors.primaryGreen },
+                          styles.subtotalBadge,
+                          {
+                            backgroundColor: colors.lightGreenBadgeTint,
+                            borderColor: colors.primaryGreen,
+                          },
                         ]}
                       >
-                        {formatCurrency(dTotals?.in || 0, currency, true)}
-                      </Text>
+                        <Text
+                          style={[
+                            styles.dateTotalText,
+                            { color: colors.primaryGreen },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          + {formatCurrency(dTotals?.in || 0, currency, true)}
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 )}
-                <CashbookRowItem
-                  entry={item}
-                  currency={currency}
-                  onPress={() =>
-                    router.push(`/cashbook/entry/${item.id}` as never)
-                  }
-                />
+
+                <View
+                  style={{
+                    marginHorizontal: 12,
+                    borderTopLeftRadius: showDateHeader ? 12 : 0,
+                    borderTopRightRadius: showDateHeader ? 12 : 0,
+                    borderBottomLeftRadius: isLastOfDate ? 12 : 0,
+                    borderBottomRightRadius: isLastOfDate ? 12 : 0,
+                    borderTopWidth: showDateHeader ? 1 : 0,
+                    borderBottomWidth: isLastOfDate ? 1 : 0,
+                    borderLeftWidth: 1,
+                    borderRightWidth: 1,
+                    borderColor: colors.borderDivider,
+                    marginBottom: isLastOfDate ? 6 : 0,
+                    overflow: "hidden",
+                  }}
+                >
+                  {/* Negative marginBottom (-1) on last item hides CashbookRowItem's internal straight bottom line */}
+                  <View style={{ marginBottom: isLastOfDate ? -1 : 0 }}>
+                    <CashbookRowItem
+                      entry={item}
+                      currency={currency}
+                      onPress={() =>
+                        router.push(`/cashbook/entry/${item.id}` as never)
+                      }
+                    />
+                  </View>
+                </View>
               </View>
             );
           }}
@@ -752,7 +802,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   reportBtnMainText: { fontFamily: "Inter_700Bold", fontSize: 12 },
-  columnHeader: { flexDirection: "row", borderBottomWidth: 1 },
+  columnHeader: {
+    flexDirection: "row",
+    marginHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
   colHeaderText: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 10,
@@ -765,10 +821,16 @@ const styles = StyleSheet.create({
   colInHeader: { flex: 1, alignItems: "flex-end" },
   dateHeaderRow: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    paddingVertical: 8,
+    paddingTop: 10,
+    paddingBottom: 6,
     paddingHorizontal: 12,
     alignItems: "center",
+  },
+  datePillAndCountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
   },
   dateHeaderPill: {
     flexDirection: "row",
@@ -777,25 +839,39 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
     gap: 5,
-    marginBottom: 4,
   },
   dateHeaderText: {
     fontFamily: "Inter_700Bold",
     fontSize: 11,
   },
-  dateCountText: { fontFamily: "Inter_500Medium", fontSize: 10 },
-  dateTotalText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
-    marginTop: 4,
+  dateCountBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
   },
-  minimizedBar: {
+  dateCountText: { fontFamily: "Inter_600SemiBold", fontSize: 10 },
+  subtotalBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 0.8,
+  },
+  dateTotalText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 14,
+  },
+  minimizedBarCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginHorizontal: 12,
+    marginBottom: 6,
     paddingHorizontal: 10,
     paddingVertical: 7,
-    borderBottomWidth: 1,
+    borderWidth: 1,
+    borderRadius: 10,
+    overflow: "hidden",
   },
   minimizedBalancesRow: {
     flex: 1,
