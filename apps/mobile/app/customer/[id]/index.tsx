@@ -52,6 +52,7 @@ const [customer, setCustomer] = useState<CustomerRow | null>(null);
   const flashListRef = useRef<FlashListRef<CustomerLedgerEntryRow> | null>(
     null,
   );
+  const prevTopEntryIdRef = useRef<string | null>(null);
   // Load customer and entries data from SQLite
   const loadData = useCallback(async () => {
     if (!activeBusinessId || !id || Platform.OS === "web") return;
@@ -66,7 +67,20 @@ const [customer, setCustomer] = useState<CustomerRow | null>(null);
           activeBusinessId,
           id,
         );
+        const newestId = ledgerData[0]?.id ?? null;
+        const shouldScrollTop =
+          prevTopEntryIdRef.current !== null &&
+          newestId !== null &&
+          newestId !== prevTopEntryIdRef.current;
+        prevTopEntryIdRef.current = newestId;
+
         setEntries(ledgerData);
+
+        if (shouldScrollTop) {
+          setTimeout(() => {
+            flashListRef.current?.scrollToOffset({ offset: 0, animated: true });
+          }, 150);
+        }
       }
     } catch (error) {
       console.error("Failed to load ledger:", error);

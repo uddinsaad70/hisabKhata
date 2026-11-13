@@ -216,9 +216,10 @@ export const TRANSLATIONS = {
     deleteAccountConfirmTitle: "Delete Account Permanently?",
     deleteAccountConfirmMsg:
       "This will permanently erase your account and all cloud-synced businesses, customers, and transactions. This action cannot be undone.",
-    deleteForeverBtn: "Delete Forever",
+ deleteForeverBtn: "Delete Forever",
     accountDeletedMsg:
       "Your account and cloud data have been permanently deleted.",
+    transactionSavedTitle: "Transaction Saved!",
   },
   bn: {
     // 1. Bottom Tab & Top Header Navigation
@@ -436,6 +437,7 @@ export const TRANSLATIONS = {
     deleteForeverBtn: "স্থায়ীভাবে মুছুন",
     accountDeletedMsg:
       "আপনার অ্যাকাউন্ট এবং ক্লাউড ডেটা স্থায়ীভাবে মুছে ফেলা হয়েছে।",
+    transactionSavedTitle: "লেনদেন সেভ হয়েছে!",
   },
 } as const;
 

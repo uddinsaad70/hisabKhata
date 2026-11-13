@@ -34,6 +34,8 @@ import {
   isFutureDate,
 } from "../../utils/dateUtils";
 import { getStrings } from "../../constants/translations";
+import { TransactionSavedOverlay } from "../../components/TransactionSavedOverlay";
+import { animationDuration } from "../../utils/animation";
 
 export default function CashbookEntryFormScreen() {
   const { type, entryId } = useLocalSearchParams<{
@@ -56,9 +58,12 @@ export default function CashbookEntryFormScreen() {
   const [amountStr, setAmountStr] = useState("0");
   const [details, setDetails] = useState("");
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("CASH");
-  const [entryDate, setEntryDate] = useState<Date>(new Date());
+const [entryDate, setEntryDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savedAmountForOverlay, setSavedAmountForOverlay] = useState<
+    number | null
+  >(null);
 
   // Load existing entry data when opening in Edit mode
   useEffect(() => {
@@ -171,7 +176,10 @@ export default function CashbookEntryFormScreen() {
           timestamp: entryDate.getTime(),
         });
       }
-      router.back();
+      setSavedAmountForOverlay(numAmount);
+      setTimeout(() => {
+        router.back();
+      }, animationDuration);  
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to save cashbook entry.");
       setIsSubmitting(false);
@@ -348,10 +356,21 @@ export default function CashbookEntryFormScreen() {
         </Pressable>
       </View>
 
-      <CalculatorKeypad
+<CalculatorKeypad
         onKeyPress={handleKeyPress}
         onDelete={handleDelete}
         onEvaluate={handleEvaluate}
+      />
+
+      <TransactionSavedOverlay
+        visible={savedAmountForOverlay !== null}
+        amount={savedAmountForOverlay || 0}
+        title={t.transactionSavedTitle}
+        accentColor={headerColor}
+        badgeText={`${isOut ? t.outHeader : t.inHeader} • ${paymentMode === "ONLINE" ? t.online : t.cashLabel}`}
+        subtitle={details.trim() || null}
+        dateText={getLocalDateString(entryDate)}
+        isNegative={isOut}
       />
     </View>
   );

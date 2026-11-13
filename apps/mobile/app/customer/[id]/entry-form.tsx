@@ -33,6 +33,8 @@ import {
   isFutureDate,
 } from "../../../utils/dateUtils";
 import { getStrings } from "../../../constants/translations";
+import { TransactionSavedOverlay } from "../../../components/TransactionSavedOverlay";
+import { animationDuration } from "../../../utils/animation";
 
 export default function CustomerEntryFormScreen() {
   const { id, type, entryId } = useLocalSearchParams<{
@@ -63,6 +65,9 @@ export default function CustomerEntryFormScreen() {
   const [entryDate, setEntryDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savedAmountForOverlay, setSavedAmountForOverlay] = useState<
+    number | null
+  >(null);
 
   // Evaluate the current math expression
   const handleEvaluate = () => {
@@ -176,7 +181,10 @@ export default function CustomerEntryFormScreen() {
         });
       }
 
-      router.back();
+      setSavedAmountForOverlay(numAmount);
+      setTimeout(() => {
+        router.back();
+      }, animationDuration);
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to save entry.");
       setIsSubmitting(false);
@@ -322,11 +330,22 @@ export default function CustomerEntryFormScreen() {
         </Pressable>
       </View>
 
-      {/* Custom Calculator Keypad */}
+{/* Custom Calculator Keypad */}
       <CalculatorKeypad
         onKeyPress={handleKeyPress}
         onDelete={handleDelete}
         onEvaluate={handleEvaluate}
+      />
+
+      <TransactionSavedOverlay
+        visible={savedAmountForOverlay !== null}
+        amount={savedAmountForOverlay || 0}
+        title={t.transactionSavedTitle}
+        accentColor={headerColor}
+        badgeText={isGave ? t.youGaveCol : t.youGotCol}
+        subtitle={details.trim() || null}
+        dateText={getLocalDateString(entryDate)}
+        isNegative={isGave}
       />
     </View>
   );

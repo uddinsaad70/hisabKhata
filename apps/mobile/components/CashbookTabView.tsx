@@ -46,6 +46,7 @@ export function CashbookTabView() {
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
   const [pickerDate, setPickerDate] = useState<Date>(new Date());
   const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
+  const prevTopEntryIdRef = useRef<string | null>(null);
 
   const loadDashboard = useCallback(async () => {
     if (!activeBusinessId) return;
@@ -61,7 +62,20 @@ export function CashbookTabView() {
       setSummary(dashSummary);
 
       const entries = await getAllCashbookEntries(db, activeBusinessId);
+      const newestId = entries[0]?.id ?? null;
+      const shouldScrollTop =
+        prevTopEntryIdRef.current !== null &&
+        newestId !== null &&
+        newestId !== prevTopEntryIdRef.current;
+      prevTopEntryIdRef.current = newestId;
+
       setAllEntries(entries);
+
+      if (shouldScrollTop) {
+        setTimeout(() => {
+          flashListRef.current?.scrollToOffset({ offset: 0, animated: true });
+        }, 150);
+      }
 
       // Calculate daily groupings
       const totals: Record<string, { in: number; out: number; count: number }> =
