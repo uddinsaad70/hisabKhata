@@ -175,34 +175,47 @@ export default function HomeScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.pageBackgroundGrey }]}>
       {/* Top Royal Blue Header Container */}
+      {/* Top Royal Blue Header Container */}
       <SafeAreaView
+        edges={["top"]}
         style={[styles.headerSafeArea, { backgroundColor: colors.primaryBlue }]}
       >
         <View style={[styles.topBar, { backgroundColor: colors.primaryBlue }]}>
-          {/* Left: Business Switcher Pill Button */}
+          {/* Left: Business Switcher Pill Button with Dynamic Initials Avatar */}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Switch business"
             onPress={() => setSwitcherVisible(true)}
-            style={[
+            style={({ pressed }) => [
               styles.businessSelector,
-              { backgroundColor: colors.darkHeaderAccent },
+              {
+                backgroundColor: colors.darkHeaderAccent,
+                opacity: pressed ? 0.85 : 1,
+              },
             ]}
           >
-            <View style={styles.businessIconBadge}>
-              <Ionicons
-                name="storefront-outline"
-                size={16}
-                color={colors.activeTabIndicator}
-              />
+            <View
+              style={[
+                styles.businessInitialsCircle,
+                { backgroundColor: colors.activeTabIndicator },
+              ]}
+            >
+              <Text style={styles.businessInitialsText}>
+                {(activeBusinessName || "B")
+                  .trim()
+                  .split(/\s+/)
+                  .slice(0, 2)
+                  .map((w) => w[0]?.toUpperCase() ?? "")
+                  .join("")}
+              </Text>
             </View>
             <Text style={styles.businessNameText} numberOfLines={1}>
               {activeBusinessName}
             </Text>
             <Ionicons
               name="chevron-down"
-              size={16}
-              color="#FFFFFF"
+              size={15}
+              color="rgba(255,255,255,0.85)"
               style={styles.dropdownChevron}
             />
           </Pressable>
@@ -386,21 +399,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 10,
+    paddingTop: 6,
+    paddingBottom: 2,
   },
   businessSelector: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingLeft: 5,
+    paddingRight: 12,
+    paddingVertical: 5,
+    borderRadius: 22,
     maxWidth: "78%",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
   },
-  businessIconBadge: {
+  businessInitialsCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     marginRight: 8,
     alignItems: "center",
     justifyContent: "center",
+  },
+  businessInitialsText: {
+    color: "#0F172A",
+    fontFamily: "Inter_700Bold",
+    fontSize: 11,
   },
   businessNameText: {
     color: "#FFFFFF",
@@ -450,13 +474,14 @@ const styles = StyleSheet.create({
   },
   headerTabsRow: {
     flexDirection: "row",
-    marginTop: 4,
+    marginTop: 0,
   },
   headerTabButton: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
+    paddingTop: 8,
+    paddingBottom: 10,
     paddingHorizontal: 8,
     borderBottomWidth: 3,
     borderBottomColor: "transparent",
@@ -475,7 +500,9 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 0,
   },
   dbStatusBadge: {
     flexDirection: "row",
