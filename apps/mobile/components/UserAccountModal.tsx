@@ -236,43 +236,108 @@ export function UserAccountModal({
     }
   };
 
-  const handlePickPhoto = async (forLoggedInUser: boolean) => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert(
-        "Permission Required",
-        "Please allow photo library access to select a profile photo.",
-      );
-      return;
+  const applyPickedAvatar = async (
+    base64Data: string,
+    forLoggedInUser: boolean,
+  ) => {
+    const dataUri = `data:image/jpeg;base64,${base64Data}`;
+    if (forLoggedInUser) {
+      try {
+        setIsBusy(true);
+        const updated = await updateActiveUserProfile({
+          avatarBase64: dataUri,
+        });
+        setUser(updated);
+        onProfileChanged(updated);
+      } catch (err: any) {
+        Alert.alert("Error", err.message || "Could not update photo.");
+      } finally {
+        setIsBusy(false);
+      }
+    } else {
+      setDraftAvatarBase64(dataUri);
     }
+  };
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.35,
-      base64: true,
-    });
+  const launchPhotoSource = async (
+    source: "CAMERA" | "GALLERY",
+    forLoggedInUser: boolean,
+  ) => {
+    try {
+      if (source === "CAMERA") {
+        const camPerm = await ImagePicker.requestCameraPermissionsAsync();
+        if (!camPerm.granted) {
+          Alert.alert(
+            language === "bn" ? "ক্যামেরা পারমিশন প্রয়োজন" : "Permission Required",
+            language === "bn"
+              ? "সরাসরি ছবি তোলার জন্য ক্যামেরা ব্যবহারের অনুমতি দিন।"
+              : "Please allow camera access to take a profile photo.",
+          );
+          return;
+        }
 
-    if (!result.canceled && result.assets[0]?.base64) {
-      const dataUri = `data:image/jpeg;base64,${result.assets[0].base64}`;
-      if (forLoggedInUser) {
-        try {
-          setIsBusy(true);
-          const updated = await updateActiveUserProfile({
-            avatarBase64: dataUri,
-          });
-          setUser(updated);
-          onProfileChanged(updated);
-        } catch (err: any) {
-          Alert.alert("Error", err.message || "Could not update photo.");
-        } finally {
-          setIsBusy(false);
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ["images"],
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.35,
+          base64: true,
+        });
+
+        if (!result.canceled && result.assets[0]?.base64) {
+          await applyPickedAvatar(result.assets[0].base64, forLoggedInUser);
         }
       } else {
-        setDraftAvatarBase64(dataUri);
+        const libPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!libPerm.granted) {
+          Alert.alert(
+            language === "bn" ? "গ্যালারি পারমিশন প্রয়োজন" : "Permission Required",
+            language === "bn"
+              ? "গ্যালারি থেকে ছবি নেওয়ার জন্য অনুমতি দিন।"
+              : "Please allow photo library access to select a profile photo.",
+          );
+          return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.35,
+          base64: true,
+        });
+
+        if (!result.canceled && result.assets[0]?.base64) {
+          await applyPickedAvatar(result.assets[0].base64, forLoggedInUser);
+        }
       }
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Could not open image picker.");
     }
+  };
+
+  const handlePickPhoto = (forLoggedInUser: boolean) => {
+    Alert.alert(
+      language === "bn" ? "প্রোফাইল ছবি পরিবর্তন" : "Update Profile Photo",
+      language === "bn"
+        ? "আপনি কীভাবে প্রোফাইল ছবি যুক্ত করতে চান?"
+        : "Choose how you would like to set your profile photo:",
+      [
+        {
+          text: language === "bn" ? "বাতিল" : "Cancel",
+          style: "cancel",
+        },
+        {
+          text: language === "bn" ? "🖼️ গ্যালারি থেকে নিন" : "🖼️ Choose from Gallery",
+          onPress: () => void launchPhotoSource("GALLERY", forLoggedInUser),
+        },
+        {
+          text: language === "bn" ? "📷 ক্যামেরায় ছবি তুলুন" : "📷 Take Photo",
+          onPress: () => void launchPhotoSource("CAMERA", forLoggedInUser),
+        },
+      ],
+      { cancelable: true },
+    );
   };
 
   const handleAuthSubmit = async () => {
