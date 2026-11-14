@@ -14,6 +14,7 @@ import {
 } from "@expo-google-fonts/inter";
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
+import { getStrings } from "../constants/translations";
 import { getDbAdapter, initializeAppDatabase } from "../db/client";
 import {
   getAllBusinesses,
@@ -25,10 +26,13 @@ export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
 
-  const themeMode = useUiStore((state) => state.themeMode);
+const themeMode = useUiStore((state) => state.themeMode);
+  const language = useUiStore((state) => state.language);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
   const setActiveBusiness = useUiStore((state) => state.setActiveBusiness);
   const colors = getThemeColors(themeMode);
+  const t = getStrings(language);
+  const [isDownloadingUpdate, setIsDownloadingUpdate] = useState<boolean>(false);
 
   // Load crisp Inter typography weights for fintech numbers and labels
   const [fontsLoaded, fontError] = useFonts({
@@ -87,11 +91,12 @@ useEffect(() => {
       try {
         const update = await Updates.checkForUpdateAsync();
         if (update.isAvailable) {
+          setIsDownloadingUpdate(true);
           await Updates.fetchUpdateAsync();
           await Updates.reloadAsync();
         }
       } catch {
-        // Ignore offline/update check errors
+        setIsDownloadingUpdate(false);
       }
     }
     void checkAndApplyOtaUpdate();
@@ -136,12 +141,38 @@ useEffect(() => {
     );
   }
 
-  if ((!fontsLoaded && !fontError) || !dbInitialized) {
+if ((!fontsLoaded && !fontError) || !dbInitialized) {
     return (
       <View
         style={[styles.centerScreen, { backgroundColor: colors.primaryBlue }]}
       >
         <ActivityIndicator size="large" color="#FFFFFF" />
+      </View>
+    );
+  }
+
+  if (isDownloadingUpdate) {
+    return (
+      <View
+        style={[styles.centerScreen, { backgroundColor: colors.primaryBlue }]}
+      >
+        <ActivityIndicator size="large" color="#FFFFFF" />
+        <Text
+          style={[
+            styles.errorTitle,
+            { color: "#FFFFFF", marginTop: 18, marginBottom: 6 },
+          ]}
+        >
+          {t.otaUpdatingTitle}
+        </Text>
+        <Text
+          style={[
+            styles.errorBody,
+            { color: "rgba(255,255,255,0.85)", maxWidth: 280 },
+          ]}
+        >
+          {t.otaUpdatingSub}
+        </Text>
       </View>
     );
   }

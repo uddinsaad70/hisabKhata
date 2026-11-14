@@ -249,6 +249,9 @@ export const TRANSLATIONS = {
       "You created business data while logged out. Do you want to add it to this account?",
     yesAddBtn: "Yes, Add",
     noDiscardBtn: "No, Discard",
+
+    otaUpdatingTitle: "Updating HisabKhata...",
+    otaUpdatingSub: "Downloading the latest features & fixes. Please wait a moment.",
   },
   bn: {
     // 1. Bottom Tab & Top Header Navigation
@@ -496,6 +499,9 @@ export const TRANSLATIONS = {
       "লগআউট থাকা অবস্থায় আপনি নতুন ব্যবসা/হিসাব লিখেছেন। এগুলো কি এই অ্যাকাউন্টের সাথে যুক্ত করতে চান?",
     yesAddBtn: "হ্যাঁ, যুক্ত করুন",
     noDiscardBtn: "না, মুছে ফেলুন",
+
+    otaUpdatingTitle: "হিসাবখাতা আপডেট হচ্ছে...",
+    otaUpdatingSub: "নতুন ফিচার ও উন্নয়ন ডাউনলোড হচ্ছে। অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন।",
   },
 } as const;
 
