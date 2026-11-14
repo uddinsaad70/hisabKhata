@@ -31,8 +31,9 @@ const themeMode = useUiStore((state) => state.themeMode);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
   const setActiveBusiness = useUiStore((state) => state.setActiveBusiness);
   const colors = getThemeColors(themeMode);
-  const t = getStrings(language);
+const t = getStrings(language);
   const [isDownloadingUpdate, setIsDownloadingUpdate] = useState<boolean>(false);
+  const [updateMessage, setUpdateMessage] = useState<string | null>(null);
 
   // Load crisp Inter typography weights for fintech numbers and labels
   const [fontsLoaded, fontError] = useFonts({
@@ -91,8 +92,19 @@ useEffect(() => {
       try {
         const update = await Updates.checkForUpdateAsync();
         if (update.isAvailable) {
+          const manifest: any = update.manifest;
+          const msg =
+            manifest?.extra?.eas?.updateMessage ||
+            manifest?.metadata?.message ||
+            manifest?.extra?.expoClient?.extra?.updateMessage ||
+            null;
+          if (typeof msg === "string" && msg.trim().length > 0) {
+            setUpdateMessage(msg.trim());
+          }
+
           setIsDownloadingUpdate(true);
           await Updates.fetchUpdateAsync();
+          await new Promise((r) => setTimeout(r, 1200));
           await Updates.reloadAsync();
         }
       } catch {
@@ -151,7 +163,7 @@ if ((!fontsLoaded && !fontError) || !dbInitialized) {
     );
   }
 
-  if (isDownloadingUpdate) {
+if (isDownloadingUpdate) {
     return (
       <View
         style={[styles.centerScreen, { backgroundColor: colors.primaryBlue }]}
@@ -173,6 +185,29 @@ if ((!fontsLoaded && !fontError) || !dbInitialized) {
         >
           {t.otaUpdatingSub}
         </Text>
+        {updateMessage ? (
+          <View
+            style={{
+              marginTop: 14,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+              borderRadius: 8,
+              backgroundColor: "rgba(255,255,255,0.14)",
+              maxWidth: 300,
+            }}
+          >
+            <Text
+              style={{
+                color: "#FFFFFF",
+                fontSize: 12,
+                fontFamily: "Inter_500Medium",
+                textAlign: "center",
+              }}
+            >
+              {updateMessage}
+            </Text>
+          </View>
+        ) : null}
       </View>
     );
   }
