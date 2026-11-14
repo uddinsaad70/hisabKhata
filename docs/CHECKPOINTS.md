@@ -46,7 +46,7 @@
 
 ### সেটআপ ও ভিত্তি (Setup & Foundation)
 
-#### [ ] CP00: Monorepo Root, `docs/` Commit এবং Expo TypeScript অ্যাপ বুটস্ট্র্যাপ
+#### [x] CP00: Monorepo Root, `docs/` Commit এবং Expo TypeScript অ্যাপ বুটস্ট্র্যাপ
 * **লক্ষ্য:** প্রজেক্ট রুট (`hisabkhata/`) তৈরি করে `.gitignore`, রুট `README.md`, এবং `docs/` ফোল্ডারে স্পেস ও চেকপয়েন্ট রেখে প্রথম `docs:` কমিট করা; এরপর `apps/mobile` বুটস্ট্র্যাপ করে স্পেসের ফোল্ডার স্ট্রাকচার অনুযায়ী সাজানো ও UUID v7 পলিফিল যুক্ত করা।
 * **ধাপে ধাপে করণীয়:**
   1. **ধাপ ক (Docs & Root Setup Commit):**
@@ -67,7 +67,7 @@
 * **শেখার পয়েন্ট (React Native বনাম ওয়েব):**
   * ওয়েব ব্রাউজারে `window.crypto.getRandomValues()` বিল্ট-ইন থাকে, কিন্তু React Native-এর Hermes JS ইঞ্জিনে এটি ডিফল্টভাবে থাকে না। তাই `react-native-get-random-values` পলিফিলটি সব ফাইলের আগে (`_layout.tsx`-এর একদম উপরে) ইম্পোর্ট করতে হয়। এছাড়া ওয়েবে `<div>` ও `<p>` ব্যবহার করলেও React Native-এ সব লেআউট `<View>` (যা ডিফল্টভাবে `display: flex; flex-direction: column`) এবং সব টেক্সট বাধ্যতামূলকভাবে `<Text>` কম্পোনেন্টের ভেতরে রাখতে হয়।
 
-#### [ ] CP01: ডিজাইন টোকেন, টাকার নির্ভুলতা (`formatCurrency.ts`) এবং লোকাল টাইমজোন (`dateUtils.ts`)
+#### [x] CP01: ডিজাইন টোকেন, টাকার নির্ভুলতা (`formatCurrency.ts`) এবং লোকাল টাইমজোন (`dateUtils.ts`)
 * **লক্ষ্য:** স্পেসের সেকশন ১.২, ৪ এবং ৬.২ অনুযায়ী কালার প্যালেট কনস্ট্যান্ট, ২-দশমিক রাউন্ডিং ও `en-IN` ফরম্যাটিং ফাংশন এবং ডিভাইসের লোকাল টাইমজোন হেল্পার তৈরি ও শতভাগ ইউনিট টেস্ট করা।
 * **ধাপে ধাপে করণীয়:**
   1. `constants/theme.ts`-এ স্পেসের সব হেক্স কালার (`#1355A3`, `#C91C42`, `#108944`, `#FFF5F6`, `#FFC107` ইত্যাদি) ডিফাইন করা।
@@ -82,7 +82,7 @@
 * **শেখার পয়েন্ট (React Native বনাম ওয়েব):**
   * ওয়েবে CSS ভেরিয়েবল (`var(--primary-blue)`) ব্যবহার করা হয়, কিন্তু React Native-এ `StyleSheet.create({})` জাভাস্ক্রিপ্ট অবজেক্ট নেয়—তাই কালার ও স্পেসিং একটি টাইপ-সেফ TypeScript অবজেক্ট (`COLORS.primaryBlue`) থেকে সরাসরি ইমপোর্ট করে ব্যবহার করতে হয়।
 
-#### [ ] CP02: কোর নেভিগেশন শেল (`CUSTOMERS | CASHBOOK` Header Tabs ও Bottom Tabs) এবং UI Store
+#### [x] CP02: কোর নেভিগেশন শেল (`CUSTOMERS | CASHBOOK` Header Tabs ও Bottom Tabs) এবং UI Store
 * **লক্ষ্য:** স্পেসের সেকশন ২.১, ৫.১ এবং ৯.১ অনুযায়ী Zustand UI স্টোর (`activeBusinessId`, `activeHomeTab`, ফিল্টার ও স্ন্যাকবার স্টেট) এবং হোম স্ক্রিনের টপ অ্যাপ বার (`#1355A3`) ও `CUSTOMERS | CASHBOOK` ট্যাব সুইচার তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `npm install zustand` চালিয়ে `store/uiStore.ts` তৈরি করা (যেখানে কোনো DB ডেটা থাকবে না; শুধু `activeBusinessId`, `activeHomeTab: 'customers' | 'cashbook'`, `customerFilter`, `customerSort`, এবং `undoSnackbar` স্টেট থাকবে)।
@@ -97,7 +97,7 @@
 
 ### লোকাল DB ও টেস্ট হারনেস (Local SQLite Database, Test Harness & Queries)
 
-#### [ ] CP02b: DB Adapter Interface (`DatabaseAdapter`) এবং `better-sqlite3` In-Memory Test Harness
+#### [x] CP02b: DB Adapter Interface (`DatabaseAdapter`) এবং `better-sqlite3` In-Memory Test Harness
 * **লক্ষ্য:** যেহেতু `expo-sqlite` একটি নেটিভ মোবাইল মডিউল এবং Jest/Node.js পরিবেশে চলে না, তাই অ্যাপের সব DB কোডের জন্য একটি ছোট ইন্টারফেস (`DatabaseAdapter`: `getAllAsync`, `getFirstAsync`, `runAsync`, `execAsync`, `withTransactionAsync`) তৈরি করা এবং Jest টেস্টের জন্য `better-sqlite3` (`:memory:`) দিয়ে এর Node-সাইড অ্যাডাপ্টার তৈরি করা—যাতে `CP03`–`CP05b`-এর সব SQL ও Window Function টেস্ট আসল SQLite ইঞ্জিনে চলে।
 * **ধাপে ধাপে করণীয়:**
   1. `apps/mobile`-এ devDependency হিসেবে `npm install -D better-sqlite3 @types/better-sqlite3` ইনস্টল করা।
@@ -112,7 +112,7 @@
 * **শেখার পয়েন্ট (React Native JSI বনাম Node Test Environment):**
   * `expo-sqlite` ফোনের ভেতরে C++ JSI বাইন্ডিং দিয়ে চলে যা Node.js-এ লোড হয় না। অনেকে Jest-এ `expo-sqlite`-কে `jest.fn()` দিয়ে মক করে—কিন্তু মক করলে SQL সিনট্যাক্স ভুল বা Window Function বাগ কখনোই ধরা পড়ে না। `DatabaseAdapter` + `better-sqlite3` (`:memory:`) ব্যবহারের ফলে আমাদের অ্যাপের ১০০% SQL কোড টেস্টের সময়ও আসল C-লেভেলের SQLite ইঞ্জিনেই রান করবে!
 
-#### [ ] CP03: SQLite V1 DDL স্কিমা (`db/schema.ts`) ও `PRAGMA user_version` মাইগ্রেশন রানার (`db/migrations.ts`)
+#### [x] CP03: SQLite V1 DDL স্কিমা (`db/schema.ts`) ও `PRAGMA user_version` মাইগ্রেশন রানার (`db/migrations.ts`)
 * **লক্ষ্য:** স্পেসের সেকশন ৬.৩ ও ৬.৪ অনুযায়ী `DatabaseAdapter`-এর ওপর ভিত্তি করে `businesses`, `customers`, `customer_entries`, `cashbook_entries`, ও `sync_state` টেবিল, সব ইনডেক্স এবং `PRAGMA user_version` মাইগ্রেশন রানার তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `db/schema.ts`-এ `PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;` এবং ৫টি টেবিল ও সব পারফরম্যান্স ইনডেক্সের SQL DDL লেখা (`businesses.currency` কলামে `CHECK (currency IN ('BDT', 'INR'))` এবং `sync_state` টেবিলে `'GLOBAL'` কার্সর কি সহ)।
@@ -125,7 +125,7 @@
 * **শেখার পয়েন্ট (SQLite CHECK Constraints & Foreign Keys):**
   * SQLite-এ টেবিল তৈরির স্কিমার ভেতরে `FOREIGN KEY` লেখা থাকলেও প্রতিবার ডাটাবেজ কানেকশন ওপেন করার পর `PRAGMA foreign_keys = ON;` না চালালে ফরেন কি এনফোর্স হয় না। তাই অ্যাডাপ্টার ইনিশিয়ালাইজেশনের শুরুতেই এটি চালানো বাধ্যতামূলক।
 
-#### [ ] CP04: মাল্টি-বিজনেস CRUD কুয়েরি (`businessQueries.ts`), Onboarding স্ক্রিন এবং Business Switcher Modal
+#### [x] CP04: মাল্টি-বিজনেস CRUD কুয়েরি (`businessQueries.ts`), Onboarding স্ক্রিন এবং Business Switcher Modal
 * **লক্ষ্য:** স্পেসের সেকশন ৫.১, ৬.১ ও ৮.১.৬ অনুযায়ী প্রথমবার অ্যাপ ওপেন করলে ব্যবসা তৈরির স্ক্রিন (`/onboarding`), মাল্টি-বিজনেস কুয়েরি এবং টপ বারের **Business Switcher Modal** তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `db/businessQueries.ts`-এ `getAllBusinesses(db)`, `createBusiness(db, input)`, `updateBusiness(db, input)`, এবং `getOrInitDeviceSyncState(db)` লেখা (প্রতিটি ব্যবসার সক্রিয় কাস্টমার সংখ্যাসহ)।
@@ -138,7 +138,7 @@
 * **শেখার পয়েন্ট (React Native বনাম ওয়েব):**
   * ওয়েবে মডালের জন্য সাধারণত CSS `position: fixed; z-index: 999` ব্যবহার করা হয়। React Native-এ নেটিভ `<Modal transparent animationType="slide">` কম্পোনেন্ট ব্যবহার করতে হয়, যা বর্তমান স্ক্রিনের উপরে হার্ডওয়্যার-অ্যাক্সিলারেটেড লেয়ার হিসেবে রেন্ডার হয়।
 
-#### [ ] CP05a: Customer Ledger কোর ডাটাবেজ কুয়েরি (`db/customerQueries.ts`)
+#### [x] CP05a: Customer Ledger কোর ডাটাবেজ কুয়েরি (`db/customerQueries.ts`)
 * **লক্ষ্য:** স্পেসের সেকশন ৬.৫.২–৬.৫.৫ অনুযায়ী কাস্টমারের CRUD, ডুপ্লিকেট ফোন চেক, হোম সামারি, Window Function রানিং ব্যালেন্স (`Bal.`), `recomputeBalance()`, এবং Cascade Soft-Delete ও Undo রিস্টোর কুয়েরি তৈরি ও আসল SQLite-এ টেস্ট করা।
 * **ধাপে ধাপে করণীয়:**
   1. `db/customerQueries.ts` তৈরি করা (`DatabaseAdapter` ব্যবহার করে):
@@ -154,7 +154,7 @@
 * **শেখার পয়েন্ট (SQLite Window Functions & Tie-Breaking):**
   * একই দিনে ও একই মিলিসেকেন্ডে দুটি এন্ট্রি হলে Window Function-এ যেন রানিং ব্যালেন্সের ক্রম কখনোই এলোমেলো না হয়, সেজন্য `ORDER BY entry_date ASC, timestamp ASC, id ASC` (টাই-ব্রেকার হিসেবে `id ASC`) এবং `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` দেওয়া অপরিহার্য।
 
-#### [ ] CP05b: Cashbook কোর ডাটাবেজ কুয়েরি (`db/cashbookQueries.ts`) এবং `v0.1.0-db` ট্যাগ
+#### [x] CP05b: Cashbook কোর ডাটাবেজ কুয়েরি (`db/cashbookQueries.ts`) এবং `v0.1.0-db` ট্যাগ
 * **লক্ষ্য:** স্পেসের সেকশন ৬.৫.১ অনুযায়ী ক্যাশবুকের ড্যাশবোর্ড সামারি (`Total` ও `Today's Balance`, `Cash in Hand` ও `Online` স্প্লিট), এন্ট্রি CRUD, সফট-ডিলিট + Undo, এবং CTE + Window Function দিয়ে মাসিক ডেইলি ও কিউমুলেটিভ ব্যালেন্স রিপোর্ট কুয়েরি তৈরি ও টেস্ট করা।
 * **ধাপে ধাপে করণীয়:**
   1. `db/cashbookQueries.ts` তৈরি করা (`DatabaseAdapter` ব্যবহার করে):
@@ -171,7 +171,7 @@
 
 ### মডিউল ১: Customer Ledger (UI & Flows)
 
-#### [ ] CP06: কাস্টমার হোম ট্যাব (Summary Card, Search, Filter/Sort Bottom Sheet ও Customer List)
+#### [x] CP06: কাস্টমার হোম ট্যাব (Summary Card, Search, Filter/Sort Bottom Sheet ও Customer List)
 * **লক্ষ্য:** স্পেসের সেকশন ২.১ অনুযায়ী `CUSTOMERS` ট্যাবের টপ সামারি কার্ড (`You will give` সবুজ, `You will get` লাল), লাইভ সার্চ বার, ফিল্টার/সর্ট বটম শিট, কাস্টমার লিস্ট (`@shopify/flash-list`) এবং Empty State তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `npx expo install @shopify/flash-list` দিয়ে FlashList ইনস্টল করা।
@@ -185,7 +185,7 @@
 * **শেখার পয়েন্ট (React Native বনাম ওয়েব):**
   * ওয়েবে বড় লিস্টে সাধারণ `.map()` দিলেও ব্রাউজার ডম হ্যান্ডেল করে, কিন্তু মোবাইলে হাজারখানেক কাস্টমার `.map()` দিয়ে রেন্ডার করলে মেমোরি ভরে অ্যাপ ফ্রিজ হয়। `@shopify/flash-list` স্ক্রিনের বাইরে যাওয়া ভিউগুলো রিসাইকেল (View Recycling) করে ৬০ FPS স্ক্রলিং বজায় রাখে।
 
-#### [ ] CP07: নতুন কাস্টমার যোগ (`/customer/add`) এবং কাস্টমার সেটিংস (`/customer/[id]/settings`)
+#### [x] CP07: নতুন কাস্টমার যোগ (`/customer/add`) এবং কাস্টমার সেটিংস (`/customer/[id]/settings`)
 * **লক্ষ্য:** স্পেসের সেকশন ২.১.৬, ২.২.১ এবং ৮.১.৫ অনুযায়ী নতুন কাস্টমার যোগ করার ফর্ম (ডুপ্লিকেট ফোন নম্বর সতর্কবার্তাসহ) এবং কাস্টমারের নাম/ফোন এডিট ও ক্যাসকেড সফট-ডিলিট স্ক্রিন তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `npm install react-hook-form zod @hookform/resolvers` ইনস্টল করে `app/customer/add.tsx` তৈরি করা: নাম (বাধ্যতামূলক) ও মোবাইল নম্বর (ঐচ্ছিক)।
@@ -198,7 +198,7 @@
 * **শেখার পয়েন্ট (React Native বনাম ওয়েব):**
   * ওয়েবে `<form onSubmit>` ও `<input>` থাকে। React Native-এ কোনো `<form>` ট্যাগ নেই; `<TextInput>`-এ `onChangeText` (ওয়েবের `onChange(e => e.target.value)`-এর বদলে সরাসরি স্ট্রিং দেয়) এবং কিবোর্ডের নিচে ইনপুট ঢেকে যাওয়া ঠেকাতে `<KeyboardAvoidingView>` ব্যবহার করতে হয়।
 
-#### [ ] CP08: কাস্টম ইন-অ্যাপ ক্যালকুলেটর কিপ্যাড কম্পোনেন্ট (`CalculatorKeypad.tsx`)
+#### [x] CP08: কাস্টম ইন-অ্যাপ ক্যালকুলেটর কিপ্যাড কম্পোনেন্ট (`CalculatorKeypad.tsx`)
 * **লক্ষ্য:** স্পেসের সেকশন ২.৩ ও ৩.২ অনুযায়ী কাস্টমার লেজার ও ক্যাশবুক উভয় জায়গায় ব্যবহারের জন্য কাস্টম ক্যালকুলেটর কিপ্যাড (`C`, `M+`, `M-`, `⌫`, `+`, `-`, `×`, `÷`, `%`, `=`) এবং অটো-ক্যালকুলেশন এক্সপ্রেশন ইঞ্জিন তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `utils/calculatorEngine.ts` তৈরি করা: যা নিরাপদভাবে গাণিতিক এক্সপ্রেশন (`+`, `-`, `×`, `÷`, `%`), মেমোরি বাটন (`M+`, `M-`), এবং চেইনড হিসাব (যেমন `41300+7000=48300*125=60380`) প্রসেস করে এবং প্রতিটি ফলাফল `roundMoney()` দিয়ে ২ দশমিক ঘরে রাউন্ড করে।
@@ -211,7 +211,7 @@
 * **শেখার পয়েন্ট (React Native বনাম ওয়েব):**
   * অ্যামাউন্ট বক্সে সাধারণ `<TextInput>` দিলে ফোনের নিজস্ব কিবোর্ড ভেসে উঠে কাস্টম ক্যালকুলেটর ঢেকে দেয়। তাই অ্যামাউন্ট ডিসপ্লে বক্সটি `<Pressable>` + `<Text>` দিয়ে তৈরি করতে হয় (অথবা `showSoftInputOnFocus={false}` দিতে হয়) যাতে শুধুমাত্র আমাদের কাস্টম ক্যালকুলেটর কিপ্যাডই কাজ করে।
 
-#### [ ] CP09: কাস্টমার ব্যক্তিগত লেজার স্ক্রিন (`/customer/[id]`) এবং নতুন এন্ট্রি ফর্ম (`/customer/[id]/entry-form`)
+#### [x] CP09: কাস্টমার ব্যক্তিগত লেজার স্ক্রিন (`/customer/[id]`) এবং নতুন এন্ট্রি ফর্ম (`/customer/[id]/entry-form`)
 * **লক্ষ্য:** স্পেসের সেকশন ২.২ ও ২.৩ অনুযায়ী কাস্টমারের ব্যক্তিগত লেজার স্ক্রিন (টপ স্ট্যাটাস ব্যানার, ৩-কলাম লেজার টেবিল, তারিখ পিল, রানিং `Bal.` ব্যাজ) এবং `YOU GAVE ৳` / `YOU GOT ৳` এন্ট্রি স্ক্রিন তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `app/customer/[id]/index.tsx` তৈরি করা:
@@ -230,7 +230,7 @@
 * **শেখার পয়েন্ট (React Native বনাম ওয়েব):**
   * ওয়েবে টেবিলের জন্য `<table><tr><td>` থাকে, কিন্তু React Native-এ কোনো টেবিল ট্যাগ নেই। ৩-কলামের লেজার টেবিল বানানোর জন্য প্রতিটি রো-কে `flexDirection: 'row'` দিয়ে বাম কলামে `flex: 2`, মাঝের গোলাপি কলামে `flex: 1, backgroundColor: '#FFF5F6'`, এবং ডান কলামে `flex: 1` দিয়ে নিখুঁত কলাম অ্যালাইনমেন্ট তৈরি করতে হয়।
 
-#### [ ] CP10: কাস্টমার এন্ট্রি ডিটেইলস, এডিট এবং ডিলিট + ৫-সেকেন্ড Undo Snackbar (`/customer/[id]/entry/[entryId]`)
+#### [x] CP10: কাস্টমার এন্ট্রি ডিটেইলস, এডিট এবং ডিলিট + ৫-সেকেন্ড Undo Snackbar (`/customer/[id]/entry/[entryId]`)
 * **লক্ষ্য:** স্পেসের সেকশন ২.৩ ও ৮.১.৪ অনুযায়ী যেকোনো কাস্টমার এন্ট্রিতে ট্যাপ করলে ডিটেইলস দেখা, এডিট করা এবং ডিলিট করলে কনফার্মেশন মডাল ও ৫-সেকেন্ডের `Entry Deleted [UNDO]` স্ন্যাকবার তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `components/DeleteConfirmModal.tsx` এবং `components/UndoSnackbar.tsx` তৈরি করা (যা কাস্টমার লেজার ও ক্যাশবুক উভয় জায়গায় ব্যবহৃত হবে)।
@@ -246,7 +246,7 @@
 
 ### মডিউল ২: Cashbook (UI & Flows)
 
-#### [ ] CP11: ক্যাশবুক ড্যাশবোর্ড (`CASHBOOK` Tab) এবং `- OUT` / `+ IN` এন্ট্রি ফর্ম (`/cashbook/entry-form`)
+#### [x] CP11: ক্যাশবুক ড্যাশবোর্ড (`CASHBOOK` Tab) এবং `- OUT` / `+ IN` এন্ট্রি ফর্ম (`/cashbook/entry-form`)
 * **লক্ষ্য:** স্পেসের সেকশন ৩.১ ও ৩.২ অনুযায়ী হোম স্ক্রিনের `CASHBOOK` ট্যাব (টপ ডুয়াল ব্যালেন্স কার্ড: `Total Balance` ও `Today's Balance`, `Cash in Hand` ও `Online` স্প্লিট, ডেইলি হেডার ও ৩-কলাম লিস্ট) এবং ক্যাশবুকের এন্ট্রি স্ক্রিন তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. হোম স্ক্রিনের `CASHBOOK` ট্যাব ভিউ তৈরি করা:
@@ -264,7 +264,7 @@
 * **শেখার পয়েন্ট (React Native বনাম ওয়েব):**
   * হোম স্ক্রিনে `CUSTOMERS` এবং `CASHBOOK` ট্যাবের ভেতর সুইচ করার সময় স্ক্রল পজিশন ও পারফরম্যান্স ঠিক রাখতে নিচের ফিক্সড বাটনগুলো (`+ ADD CUSTOMER` বনাম `- OUT / + IN`) অ্যাক্টিভ ট্যাব অনুযায়ী কন্ডিশনালি রেন্ডার করা হয়।
 
-#### [ ] CP12: ক্যাশবুক এন্ট্রি ডিটেইলস, এডিট, ডিলিট এবং আনডু (`/cashbook/entry/[entryId]`)
+#### [x] CP12: ক্যাশবুক এন্ট্রি ডিটেইলস, এডিট, ডিলিট এবং আনডু (`/cashbook/entry/[entryId]`)
 * **লক্ষ্য:** স্পেসের সেকশন ৩.৩ অনুযায়ী ক্যাশবুক এন্ট্রির ডিটেইলস স্ক্রিন, এডিট ফ্লো এবং ডিলিট কনফার্মেশন ও ৫-সেকেন্ড `UNDO` স্ন্যাকবার যুক্ত করা।
 * **ধাপে ধাপে করণীয়:**
   1. `app/cashbook/entry/[entryId].tsx` তৈরি করা: এন্ট্রির ধরন (`- OUT` লাল বা `+ IN` সবুজ), সময় ও তারিখ, পেমেন্ট মোড (`Cash`/`Online`), টাকার পরিমাণ, বিবরণ, সিঙ্ক ব্যাকআপ ব্যাজ এবং `✎ EDIT ENTRY` ও `🗑️ DELETE` বাটন।
@@ -279,7 +279,7 @@
 
 ### রিপোর্ট ও PDF জেনারেশন (Reports & PDF Export/Share)
 
-#### [ ] CP13: কাস্টমার রিপোর্ট (`/customer/[id]/report`), সকল কাস্টমার রিপোর্ট (`/customer/report-all`) ও তারিখ রেঞ্জ ফিল্টার
+#### [x] CP13: কাস্টমার রিপোর্ট (`/customer/[id]/report`), সকল কাস্টমার রিপোর্ট (`/customer/report-all`) ও তারিখ রেঞ্জ ফিল্টার
 * **লক্ষ্য:** স্পেসের সেকশন ২.৪ ও ৫.১ অনুযায়ী কাস্টমারের স্টেটমেন্ট রিপোর্ট স্ক্রিন (`START DATE` ও `END DATE` ক্যালেন্ডার মডাল, ডিউরেশন ড্রপডাউন, সার্চ, এবং `Net Balance / TOTAL / YOU GAVE / YOU GOT` সামারি স্ট্রিপ) এবং সকল কাস্টমারের সামগ্রিক রিপোর্ট স্ক্রিন তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `components/DateRangePickerModal.tsx` তৈরি করা (`Start Date` ও `End Date` ক্যালেন্ডার সিলেক্টর, নিচে `OK`, `CANCEL`, `REMOVE` বাটন এবং কুইক প্রিসেট: `All`, `This Month`, `Last Month`, `Today`, `Custom Date Range`)।
@@ -292,7 +292,7 @@
 * **শেখার পয়েন্ট (SQL Date Filtering):**
   * আমরা যেহেতু `entry_date` কলামে ISO `'YYYY-MM-DD'` ফরম্যাটে লোকাল তারিখ স্টোর করেছি, তাই SQLite-এ `entry_date BETWEEN '2026-10-01' AND '2026-10-31'` লেক্সিকোগ্রাফিকাল (বর্ণানুক্রমিক) তুলনাতেই শতভাগ নিখুঁত ও ইনডেক্স-ফাস্ট কাজ করে।
 
-#### [ ] CP14: ক্যাশবুক ডেইলি রিপোর্ট (`/cashbook/report`) এবং PDF স্টেটমেন্ট ডাউনলোড ও শেয়ার (`pdfGenerator.ts`)
+#### [x] CP14: ক্যাশবুক ডেইলি রিপোর্ট (`/cashbook/report`) এবং PDF স্টেটমেন্ট ডাউনলোড ও শেয়ার (`pdfGenerator.ts`)
 * **লক্ষ্য:** স্পেসের সেকশন ২.৪.৪, ২.৪.৫, ৩.৪ এবং ৯.১ অনুযায়ী ক্যাশবুকের তারিখভিত্তিক (`DATE | DAILY BALANCE | TOTAL BALANCE`) রিপোর্ট স্ক্রিন এবং `expo-print` ও `expo-sharing` দিয়ে কাস্টমার ও ক্যাশবুক উভয়ের প্রফেশনাল PDF তৈরি, ডাউনলোড ও WhatsApp শেয়ার যুক্ত করা।
 * **ধাপে ধাপে করণীয়:**
   1. `npx expo install expo-print expo-sharing expo-file-system` চালিয়ে প্যাকেজগুলো ইনস্টল করা।
@@ -310,7 +310,7 @@
 
 ### সুরক্ষা, সেটিংস ও ব্যাকআপ (Settings, Security & Local Backup)
 
-#### [ ] CP15: বাংলা/ইংরেজি ভাষা (`i18n`) এবং কারেন্সি (`BDT ৳` / `INR ₹`) সেটিংস (`/more`)
+#### [x] CP15: বাংলা/ইংরেজি ভাষা (`i18n`) এবং কারেন্সি (`BDT ৳` / `INR ₹`) সেটিংস (`/more`)
 * **লক্ষ্য:** স্পেসের সেকশন ৮.১.৩ ও ৯.১ অনুযায়ী `More / সেটিংস` ট্যাবে বাংলা (`bn`) ও ইংরেজি (`en`) ভাষা পরিবর্তন এবং বর্তমান ব্যবসার কারেন্সি (`BDT ৳` / `INR ₹`) টগল করার সুবিধা যুক্ত করা।
 * **ধাপে ধাপে করণীয়:**
   1. `npx expo install expo-localization` এবং `npm install i18next react-i18next` ইনস্টল করে `i18n/bn.json`, `i18n/en.json` এবং `i18n/index.ts` কনফিগার করা।
@@ -322,7 +322,7 @@
 * **শেখার পয়েন্ট (React Native Localization):**
   * ওয়েবে ব্রাউজার রিলোড করে ভাষা বদলানো গেলেও মোবাইলে ইউজার রিলোড ছাড়াই তাৎক্ষণিক ভাষা পরিবর্তন আশা করেন; `react-i18next`-এর `i18n.changeLanguage('bn')` রিঅ্যাক্ট কনটেক্সটের মাধ্যমে সব মাউন্টেড স্ক্রিন সাথে সাথে রি-রেন্ডার করে।
 
-#### [ ] CP16: App PIN এবং Biometric (Fingerprint/FaceID) লক (`/lock`)
+#### [x] CP16: App PIN এবং Biometric (Fingerprint/FaceID) লক (`/lock`)
 * **লক্ষ্য:** স্পেসের সেকশন ৫.১ ও ৮.১.১ অনুযায়ী ৪-ডিজিট PIN এবং ফিঙ্গারপ্রিন্ট/FaceID লক (`expo-local-authentication` + `expo-secure-store`) তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `npx expo install expo-local-authentication expo-secure-store` চালিয়ে প্যাকেজ দুটি ইনস্টল করা।
@@ -335,7 +335,7 @@
 * **শেখার পয়েন্ট (React Native AppState Lifecycle):**
   * ওয়েবে `document.visibilityState` থাকে, আর React Native-এ `AppState.addEventListener('change', nextState => ...)` দিয়ে অ্যাপ কখন ব্যাকগ্রাউন্ডে (`background`) গেছে আর কখন আবার ওপেন (`active`) হয়েছে তা ট্র্যাক করা হয়।
 
-#### [ ] CP17: লোকাল ব্যাকআপ ও রিস্টোর (`.db` ফাইল + `PRAGMA user_version` গার্ড এবং CSV/JSON এক্সপোর্ট/ইমপোর্ট)
+#### [x] CP17: লোকাল ব্যাকআপ ও রিস্টোর (`.db` ফাইল + `PRAGMA user_version` গার্ড এবং CSV/JSON এক্সপোর্ট/ইমপোর্ট)
 * **লক্ষ্য:** স্পেসের সেকশন ৬.৩ ও ৮.১.২ অনুযায়ী সম্পূর্ণ অফলাইনে `.db` ফাইল ব্যাকআপ ও রিস্টোর (ভার্সন চেকসহ) এবং JSON/CSV এক্সপোর্ট ও ইমপোর্ট তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `npx expo install expo-document-picker` চালিয়ে `db/backupService.ts` তৈরি করা।
@@ -350,7 +350,7 @@
 * **শেখার পয়েন্ট (SQLite WAL Checkpoint Before Copy):**
   * SQLite যখন `WAL (Write-Ahead Logging)` মোডে চলে, তখন সাম্প্রতিক কিছু এন্ট্রি মূল `.db` ফাইলের বদলে `.db-wal` ফাইলে থাকে। তাই `.db` ফাইল কপি করার ঠিক আগে `PRAGMA wal_checkpoint(TRUNCATE);` চালানো বাধ্যতামূলক—নতুবা সর্বশেষ এন্ট্রিগুলো ব্যাকআপ ফাইলে যাবে না!
 
-#### [ ] CP18: Phase 1 QA, Empty States, Edge-Case Audit এবং MVP Gate (`v1.0.0-mvp`)
+#### [x] CP18: Phase 1 QA, Empty States, Edge-Case Audit এবং MVP Gate (`v1.0.0-mvp`)
 * **লক্ষ্য:** স্পেসের সেকশন ৮.১-এর সব Must-Have শর্ত, Empty States এবং ইনপুট ভ্যালিডেশন এজ-কেস যাচাই করে Phase 1 লোকাল MVP চূড়ান্ত করা।
 * **ধাপে ধাপে করণীয়:**
   1. কাস্টমার লিস্ট, কাস্টমার লেজার এবং ক্যাশবুকে কোনো ডেটা না থাকলে পরিষ্কার বাংলা/ইংরেজি ভিজ্যুয়াল Empty State যোগ করা।
@@ -367,7 +367,7 @@
 
 ### API ভিত্তি ও সার্ভার স্কিমা (Backend Foundation & PostgreSQL Schema)
 
-#### [ ] CP19: `apps/api` Node.js + Express + TypeScript প্রজেক্ট সেটআপ, Docker Postgres এবং Pino/Helmet/Zod ভিত্তি
+#### [x] CP19: `apps/api` Node.js + Express + TypeScript প্রজেক্ট সেটআপ, Docker Postgres এবং Pino/Helmet/Zod ভিত্তি
 * **লক্ষ্য:** স্পেসের সেকশন ৭.১, ৭.৬ ও ৯.৩ অনুযায়ী `apps/api` ব্যাকএন্ড প্রজেক্ট, লোকাল ডেভেলপমেন্ট ও টেস্টের জন্য `docker-compose.yml` (PostgreSQL 16), এবং Express অ্যাপের কোর মিডলওয়্যার তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `apps/api` ফোল্ডারে TypeScript, `express`, `cors`, `helmet`, `pino`, `pino-http`, `zod`, `express-rate-limit` এবং ডেভ-ডিপেন্ডেন্সি হিসেবে `vitest`, `supertest`, `tsx` ইনস্টল করা।
@@ -380,7 +380,7 @@
 * **শেখার পয়েন্ট (Backend Insight):**
   * Express অ্যাপ তৈরি (`src/app.ts`) এবং সার্ভার লিসেনিং (`src/server.ts`) আলাদা ফাইলে রাখলে `supertest` দিয়ে ইন্টিগ্রেশন টেস্ট চালানোর সময় পোর্ট কনফ্লিক্ট ছাড়াই সরাসরি `app` ইন্সট্যান্স টেস্ট করা যায়।
 
-#### [ ] CP20: Prisma PostgreSQL স্কিমা (`NUMERIC(14,2)`), `server_updated_at` DB Trigger এবং মাইগ্রেশন
+#### [x] CP20: Prisma PostgreSQL স্কিমা (`NUMERIC(14,2)`), `server_updated_at` DB Trigger এবং মাইগ্রেশন
 * **লক্ষ্য:** স্পেসের সেকশন ৭.৪ অনুযায়ী ৭টি সার্ভার টেবিল (`users`, `refresh_tokens`, `devices`, `businesses`, `customers`, `customer_entries`, `cashbook_entries`), কম্পোজিট কার্সর ইনডেক্স এবং PostgreSQL `set_server_updated_at()` ট্রিগার মাইগ্রেশন তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `apps/api/prisma/schema.prisma`-এ স্পেসের ৭.৪ সেকশনের সম্পূর্ণ স্কিমা লেখা (অ্যামাউন্ট `@db.Decimal(14, 2)`, `customers` টেবিলে কোনো `net_balance` নেই, এবং প্রতিটি সিঙ্ক টেবিলে `@@index([businessId, serverUpdatedAt, id])`)।
@@ -395,7 +395,7 @@
 
 ### Auth ও Ownership Middleware (Authentication & Authorization)
 
-#### [ ] CP21: Email/Password (`argon2`), Google ID Token Verify এবং Refresh Token Rotation (`/auth/*`)
+#### [x] CP21: Email/Password (`argon2`), Google ID Token Verify এবং Refresh Token Rotation (`/auth/*`)
 * **লক্ষ্য:** স্পেসের সেকশন ৭.২ ও ৭.৫.১ অনুযায়ী `POST /auth/register`, `POST /auth/login`, `POST /auth/google`, এবং `POST /auth/refresh` এন্ডপয়েন্ট ও ডিভাইস রেজিস্ট্রেশন তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `argon2`, `jsonwebtoken`, ও `google-auth-library` ইনস্টল করা।
@@ -411,7 +411,7 @@
 * **শেখার পয়েন্ট (Security Insight):**
   * ডাটাবেজে কখনোই কাঁচা (Plaintext) Refresh Token স্টোর করা উচিত নয়; পাসওয়ার্ডের মতোই Refresh Token-এর SHA-256 হ্যাশ স্টোর করলে ডাটাবেজ ডাম্প ফাঁস হলেও হ্যাকার কোনো সেশন হাইজ্যাক করতে পারবে না।
 
-#### [ ] CP22: JWT Auth Middleware এবং `business_id` Ownership Authorization Middleware
+#### [x] CP22: JWT Auth Middleware এবং `business_id` Ownership Authorization Middleware
 * **লক্ষ্য:** স্পেসের সেকশন ৭.২ অনুযায়ী প্রতিটি প্রোটেক্টেড রিকোয়েস্টে JWT যাচাই এবং রিকোয়েস্টে থাকা সব `business_id` ওই ইউজারের মালিকানাধীন কিনা তা যাচাই করার মিডলওয়্যার তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `src/middleware/authMiddleware.ts` তৈরি করা: `Authorization: Bearer <token>` থেকে `req.userId` ভেরিফাই করা।
@@ -425,7 +425,7 @@
 
 ### সিঙ্ক সার্ভার (Sync Push, Pull & Tombstone Purge)
 
-#### [ ] CP23: Batch Push Endpoint (`POST /sync/push`) — FK ক্রম, LWW Conflict, Clock Drift Clamp ও Idempotency
+#### [x] CP23: Batch Push Endpoint (`POST /sync/push`) — FK ক্রম, LWW Conflict, Clock Drift Clamp ও Idempotency
 * **লক্ষ্য:** স্পেসের সেকশন ৭.৩.১, ৭.৩.৩ ও ৭.৫.২ অনুযায়ী এক ট্রানজেকশনে সর্বোচ্চ ২০০ রো-এর ব্যাচ পুশ, ঘড়ি এগিয়ে থাকার ক্ল্যাম্পিং, Last-Write-Wins কনফ্লিক্ট রেজোলিউশন এবং `accepted` ও `rejectedConflicts` রেসপন্স তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `src/sync/sync.schema.ts`-এ `POST /sync/push`-এর Zod ভ্যালিডেশন স্কিমা লেখা (মোট রো $\le 200$, অ্যামাউন্ট ২ দশমিক ঘর, বৈধ UUID)।
@@ -440,7 +440,7 @@
 * **শেখার পয়েন্ট (Prisma vs Raw SQL Upsert):**
   * সাধারণ `prisma.customerEntry.upsert()`-এ `ON CONFLICT DO UPDATE WHERE EXCLUDED.updated_at >= customer_entries.updated_at` শর্ত দেওয়া যায় না। তাই কন্ডিশনাল LWW আপসার্টের জন্য Raw SQL (`INSERT ... ON CONFLICT (id) DO UPDATE ... WHERE ...`) ব্যবহার করা সবচেয়ে পরিচ্ছন্ন ও দ্রুত।
 
-#### [ ] CP24: Paginated Pull Endpoint (`GET /sync/pull`), `(server_updated_at, id)` Cursor, `410 Gone` ও Tombstone Purge
+#### [x] CP24: Paginated Pull Endpoint (`GET /sync/pull`), `(server_updated_at, id)` Cursor, `410 Gone` ও Tombstone Purge
 * **লক্ষ্য:** স্পেসের সেকশন ৭.৩.১, ৭.৩.২ ও ৭.৫.৩ অনুযায়ী সার্ভার-টাইম কার্সর পেজিনেশন, `devices` টেবিলের কার্সর আপডেট, ৯০ দিনের পুরনো কার্সরে `410 Gone` এবং নিরাপদ Tombstone Purge ফাংশন তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `src/sync/sync.service.ts`-এ `processPull()` লেখা (সমতুল্য Raw SQL কমেন্টসহ):
@@ -455,7 +455,7 @@
 * **শেখার পয়েন্ট (Tuple Cursor Pagination):**
   * SQL-এ `OFFSET` পেজিনেশন ব্যবহার করলে মাঝখানে নতুন রো ঢুকলে রো ডুপ্লিকেট বা স্কিপ হয় এবং হাজারতম পেজে কুয়েরি স্লো হয়ে যায়। কিন্তু PostgreSQL-এর Row Value সংযুক্ত তুলনা `WHERE (server_updated_at, id) > ($1::timestamptz, $2::uuid)` কম্পোজিট B-Tree ইনডেক্স ব্যবহার করে সবসময় $O(\log N)$ সময়ে নিখুঁত পরের পেজ দেয়।
 
-#### [ ] CP25: OpenAPI 3.1 ডকুমেন্টেশন (`/docs`) এবং Backend Engineering Checklist পূর্ণাঙ্গ যাচাই (`v1.5.0-api`)
+#### [x] CP25: OpenAPI 3.1 ডকুমেন্টেশন (`/docs`) এবং Backend Engineering Checklist পূর্ণাঙ্গ যাচাই (`v1.5.0-api`)
 * **লক্ষ্য:** স্পেসের সেকশন ৭.৬ অনুযায়ী `/docs` রাউটে Swagger/OpenAPI ডকুমেন্টেশন যুক্ত করা এবং সম্পূর্ণ ব্যাকএন্ড টেস্ট স্যুট রান করে API মাইলস্টোন সম্পন্ন করা।
 * **ধাপে ধাপে করণীয়:**
   1. `src/docs/openapi.ts` তৈরি করে `/auth/*` এবং `/sync/*` এন্ডপয়েন্টগুলোর OpenAPI 3.1 স্পেক ও `/docs` UI রাউট যুক্ত করা।
@@ -469,7 +469,7 @@
 
 ### মোবাইল সিঙ্ক ক্লায়েন্ট (Mobile Sync Client & Auth Integration)
 
-#### [ ] CP26: মোবাইল Auth স্ক্রিন, টোকেন রোটেশন ক্লায়েন্ট এবং প্রথম লগইনে `owner_user_id` বাইন্ডিং
+#### [x] CP26: মোবাইল Auth স্ক্রিন, টোকেন রোটেশন ক্লায়েন্ট এবং প্রথম লগইনে `owner_user_id` বাইন্ডিং
 * **লক্ষ্য:** স্পেসের সেকশন ৭.২ ও ৯.১ অনুযায়ী মোবাইল অ্যাপের `More -> Cloud Sync` থেকে লগইন/রেজিস্টার করা, `expo-secure-store`-এ টোকেন রাখা ও অটো-রিফ্রেশ করা এবং প্রথমবার লগইনে লোকাল ব্যবসাগুলো ইউজারের অ্যাকাউন্টে যুক্ত করা।
 * **ধাপে ধাপে করণীয়:**
   1. `services/apiClient.ts` তৈরি করা: যা প্রতিটি রিকোয়েস্টে `accessToken` যুক্ত করে এবং `401` পেলে স্বয়ংক্রিয়ভাবে `/auth/refresh` কল করে নতুন টোকেন নিয়ে রিকোয়েস্ট রিট্রাই করে।
@@ -482,7 +482,7 @@
 * **শেখার পয়েন্ট (React Native বনাম ওয়েব):**
   * ওয়েবে রিফ্রেশ টোকেন সাধারণত `HttpOnly Cookie`-তে রাখা হয়; কিন্তু নেটিভ মোবাইল অ্যাপে ব্রাউজার কুকি জার নির্ভরযোগ্য নয়—তাই OS Keychain / Keystore-ভিত্তিক এনক্রিপ্টেড `expo-secure-store`-এ টোকেন সংরক্ষণ করা স্ট্যান্ডার্ড নিয়ম।
 
-#### [ ] CP27: মোবাইল `syncService.ts` (`SyncTransport` ইন্টারফেস, Batch Push ও Cursor Pull Orchestrator)
+#### [x] CP27: মোবাইল `syncService.ts` (`SyncTransport` ইন্টারফেস, Batch Push ও Cursor Pull Orchestrator)
 * **লক্ষ্য:** স্পেসের সেকশন ৬.৩, ৬.৫.৩, ৭.৩ ও ৯.১ অনুযায়ী মোবাইলে `SyncTransport` ইন্টারফেসের পেছনে সম্পূর্ণ Push এবং Pull সিঙ্ক ইঞ্জিন তৈরি করা।
 * **ধাপে ধাপে করণীয়:**
   1. `db/syncService.ts`-এ `SyncTransport` ইন্টারফেস এবং `HttpSyncTransport` ইমপ্লিমেন্ট করা।
@@ -495,7 +495,7 @@
 * **শেখার পয়েন্ট (Offline-First Architecture):**
   * UI কম্পোনেন্টগুলো কখনোই সরাসরি API কল করে না; UI সবসময় লোকাল SQLite থেকে পড়ে ও লেখে, আর `syncService` ব্যাকগ্রাউন্ডে SQLite ও সার্ভারের মধ্যে ডেটা আদান-প্রদান করে।
 
-#### [ ] CP28: মোবাইল `410 Gone` ফুল-রিসিঙ্ক হ্যান্ডলার এবং সিঙ্ক স্ট্যাটাস UI ব্যাজ
+#### [x] CP28: মোবাইল `410 Gone` ফুল-রিসিঙ্ক হ্যান্ডলার এবং সিঙ্ক স্ট্যাটাস UI ব্যাজ
 * **লক্ষ্য:** স্পেসের সেকশন ৩.৩.২ ও ৭.৩.২ অনুযায়ী `410 Gone` পেলে নিরাপদে ফুল-রিসিঙ্ক করা এবং টপ অ্যাপ বার ও এন্ট্রি ডিটেইলসে সিঙ্ক স্ট্যাটাস (`Entry is backed up` / `Entry is not backed up`) দেখানো।
 * **ধাপে ধাপে করণীয়:**
   1. `syncService.ts`-এ `410 Gone` হ্যান্ডলার যোগ করা: পুল করার সময় সার্ভার `410` দিলে আগে নিজের সব `is_synced = 0` রো পুশ করা, এরপর লোকাল সিঙ্কড রো (`is_synced = 1`) ক্লিয়ার করে `last_pulled_cursor = null` দিয়ে শুরু থেকে ফ্রেশ পুল করা এবং সব কাস্টমারের `recomputeBalance()` চালানো।
@@ -508,7 +508,7 @@
 
 ### প্রোডাকশন হার্ডেনিং ও রিলিজ (Production Hardening & CI/CD)
 
-#### [ ] CP29: Docker প্রোডাকশন ইমেজ, GitHub Actions CI, এবং EAS Build কনফিগারেশন (`v2.0.0`)
+#### [x] CP29: Docker প্রোডাকশন ইমেজ, GitHub Actions CI, এবং EAS Build কনফিগারেশন (`v2.0.0`)
 * **লক্ষ্য:** স্পেসের সেকশন ৭.৬ ও ৯.২ অনুযায়ী ব্যাকএন্ডের মাল্টি-স্টেজ `Dockerfile`, GitHub Actions CI পাইপলাইন এবং মোবাইল অ্যাপের Android (`.apk`/`.aab`) ও iOS (`.ipa`) ক্লাউড বিল্ডের জন্য `eas.json` চূড়ান্ত করা।
 * **ধাপে ধাপে করণীয়:**
   1. `apps/api/Dockerfile` (multi-stage build) এবং `.github/workflows/ci.yml` তৈরি করা (যা প্রতিটি পুশে মোবাইল ও ব্যাকএন্ডের `tsc --noEmit`, `prisma validate`, এবং সব টেস্ট রান করবে)।
