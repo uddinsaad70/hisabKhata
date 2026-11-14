@@ -86,33 +86,38 @@ const t = getStrings(language);
     };
   }, []);
 
-useEffect(() => {
-    if (Platform.OS === "web" || __DEV__) return;
-    async function checkAndApplyOtaUpdate() {
-      try {
-        const update = await Updates.checkForUpdateAsync();
-        if (update.isAvailable) {
-          const manifest: any = update.manifest;
-          const msg =
-            manifest?.extra?.eas?.updateMessage ||
-            manifest?.metadata?.message ||
-            manifest?.extra?.expoClient?.extra?.updateMessage ||
-            null;
-          if (typeof msg === "string" && msg.trim().length > 0) {
-            setUpdateMessage(msg.trim());
-          }
+const { isDownloading, isUpdatePending, availableUpdate } =
+    Updates.useUpdates();
 
-          setIsDownloadingUpdate(true);
-          await Updates.fetchUpdateAsync();
-          await new Promise((r) => setTimeout(r, 1200));
-          await Updates.reloadAsync();
-        }
-      } catch {
-        setIsDownloadingUpdate(false);
+  useEffect(() => {
+    if (Platform.OS === "web" || __DEV__) return;
+    void Updates.checkForUpdateAsync().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === "web" || __DEV__) return;
+
+    if (isDownloading || isUpdatePending) {
+      setIsDownloadingUpdate(true);
+      const manifest: any = availableUpdate?.manifest;
+      const msg =
+        manifest?.extra?.eas?.updateMessage ||
+        manifest?.metadata?.message ||
+        manifest?.extra?.expoClient?.extra?.updateMessage ||
+        process.env.EXPO_PUBLIC_UPDATE_MESSAGE ||
+        null;
+      if (typeof msg === "string" && msg.trim().length > 0) {
+        setUpdateMessage(msg.trim());
       }
     }
-    void checkAndApplyOtaUpdate();
-  }, []);
+
+    if (isUpdatePending) {
+      const timer = setTimeout(() => {
+        void Updates.reloadAsync();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isDownloading, isUpdatePending, availableUpdate]);
 
   useEffect(() => {
     if ((!fontsLoaded && !fontError) || !dbInitialized) return;
