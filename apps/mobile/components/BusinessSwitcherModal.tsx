@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getDbAdapter } from "../db/client";
 import {
@@ -34,6 +35,7 @@ export function BusinessSwitcherModal({
   visible,
   onClose,
 }: BusinessSwitcherModalProps) {
+  const router = useRouter();
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
   const setActiveBusiness = useUiStore((state) => state.setActiveBusiness);
   const themeMode = useUiStore((state) => state.themeMode);
@@ -418,7 +420,10 @@ export function BusinessSwitcherModal({
               <View style={styles.footerWrap}>
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => setIsCreatingNew(true)}
+                  onPress={() => {
+                    onClose();
+                    router.push("/onboarding" as any);
+                  }}
                   style={[
                     styles.addNewBusinessBtn,
                     { backgroundColor: colors.primaryBlue },

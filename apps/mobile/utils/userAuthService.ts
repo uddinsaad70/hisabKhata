@@ -17,6 +17,22 @@ const ACCESS_TOKEN_KEY = "hk_access_token_v1";
 const REFRESH_TOKEN_KEY = "hk_refresh_token_v1";
 const DEVICE_ID_KEY = "hk_device_id_v1";
 const USER_PROFILE_CACHE_KEY = "hk_user_profile_cache_v1";
+const POST_LOGOUT_GUEST_KEY = "hk_post_logout_guest_v1";
+
+export async function isPostLogoutGuestSession(): Promise<boolean> {
+  if (Platform.OS === "web") return false;
+  const val = await SecureStore.getItemAsync(POST_LOGOUT_GUEST_KEY);
+  return val === "true";
+}
+
+export async function setPostLogoutGuestSession(active: boolean): Promise<void> {
+  if (Platform.OS === "web") return;
+  if (active) {
+    await SecureStore.setItemAsync(POST_LOGOUT_GUEST_KEY, "true");
+  } else {
+    await SecureStore.deleteItemAsync(POST_LOGOUT_GUEST_KEY);
+  }
+}
 
 export function getApiBaseUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
@@ -300,6 +316,7 @@ export async function logoutUserAccount(): Promise<void> {
   await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
   await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
   await SecureStore.deleteItemAsync(USER_PROFILE_CACHE_KEY);
+  await setPostLogoutGuestSession(true);
 }
 
 /**

@@ -1,8 +1,9 @@
 // apps/mobile/app/_layout.tsx
 import "react-native-get-random-values";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
+import * as Updates from "expo-updates";
 import { StatusBar } from "expo-status-bar";
 import {
   useFonts,
@@ -81,6 +82,22 @@ export default function RootLayout() {
   }, []);
 
 useEffect(() => {
+    if (Platform.OS === "web" || __DEV__) return;
+    async function checkAndApplyOtaUpdate() {
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (update.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          await Updates.reloadAsync();
+        }
+      } catch {
+        // Ignore offline/update check errors
+      }
+    }
+    void checkAndApplyOtaUpdate();
+  }, []);
+
+  useEffect(() => {
     if ((!fontsLoaded && !fontError) || !dbInitialized) return;
 
     const currentRoute = segments[0] as string;
@@ -89,11 +106,8 @@ useEffect(() => {
 
     if (inGoogleAuth) return;
 
-    if ((needsOnboarding || !activeBusinessId) && !inOnboarding) {
+    if (!activeBusinessId && !inOnboarding) {
       router.replace("/onboarding" as any);
-    } else if (activeBusinessId && inOnboarding) {
-      setNeedsOnboarding(false);
-      router.replace("/(tabs)");
     }
   }, [
     fontsLoaded,

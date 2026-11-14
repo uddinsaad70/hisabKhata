@@ -29,10 +29,12 @@ import {
   getApiBaseUrl,
   getCurrentUserProfile,
   getGoogleOAuthBridgeUrl,
+  isPostLogoutGuestSession,
   loginUserAccount,
   loginWithGoogleToken,
   logoutUserAccount,
   registerUserAccount,
+  setPostLogoutGuestSession,
   updateActiveUserProfile,
   type UserProfile,
 } from "../utils/userAuthService";
@@ -110,7 +112,44 @@ useEffect(() => {
     }
   }, [visible, activeBusinessId]);
 
+const resolveGuestBusinessesBeforeLogin = async (): Promise<void> => {
+    if (Platform.OS === "web") return;
+    const isPostLogout = await isPostLogoutGuestSession();
+    if (!isPostLogout) return;
+
+    const db = getDbAdapter();
+    const guestRow = await db.getFirstAsync<{ cnt: number }>(
+      `SELECT COUNT(*) as cnt FROM businesses WHERE owner_user_id IS NULL AND is_deleted = 0;`,
+    );
+    const guestCount = guestRow?.cnt ?? 0;
+    if (guestCount === 0) return;
+
+    const shouldMerge = await new Promise<boolean>((resolve) => {
+      Alert.alert(
+        t.mergeGuestDataTitle,
+        t.mergeGuestDataMsg,
+        [
+          {
+            text: t.noDiscardBtn,
+            style: "destructive",
+            onPress: () => resolve(false),
+          },
+          {
+            text: t.yesAddBtn,
+            onPress: () => resolve(true),
+          },
+        ],
+        { cancelable: false },
+      );
+    });
+
+    if (!shouldMerge) {
+      await db.runAsync(`DELETE FROM businesses WHERE owner_user_id IS NULL;`);
+    }
+  };
+
   const finalizeLoginAndRoute = async (profile: UserProfile) => {
+    await setPostLogoutGuestSession(false);
     setUser(profile);
     await syncNowWithCloud();
 
@@ -243,6 +282,7 @@ useEffect(() => {
       }
 
       if (resolvedToken) {
+        await resolveGuestBusinessesBeforeLogin();
         const profile = await loginWithGoogleToken(resolvedToken);
         await finalizeLoginAndRoute(profile);
       }
@@ -345,6 +385,8 @@ const handlePickPhoto = (forLoggedInUser: boolean) => {
 
     setIsBusy(true);
     try {
+      await resolveGuestBusinessesBeforeLogin();
+
       let profile: UserProfile;
       if (authTab === "REGISTER") {
         profile = await registerUserAccount({
@@ -389,29 +431,31 @@ setName("");
     }
   };
 
+const resetWorkspaceToOnboarding = async () => {
+    if (Platform.OS !== "web") {
+      const db = getDbAdapter();
+      await db.withTransactionAsync(async () => {
+        await db.runAsync(`DELETE FROM businesses;`);
+        await db.runAsync(
+          `UPDATE sync_state SET last_pulled_cursor = NULL, last_pushed_at = 0 WHERE business_id = 'GLOBAL';`,
+        );
+      });
+    }
+    setActiveBusiness(null as any, "", "BDT");
+    setUser(null);
+    setUnsyncedCount(0);
+    DeviceEventEmitter.emit("WORKSPACE_RESET");
+    onProfileChanged(null);
+    onClose();
+    router.replace("/onboarding" as any);
+  };
+
   const handleLogout = async () => {
     if (isBusy) return;
     setIsBusy(true);
     try {
       await logoutUserAccount();
-
-      if (Platform.OS !== "web") {
-        const db = getDbAdapter();
-        const freshGuestBiz = await clearLoggedInUserWorkspaceOnLogout(
-          db,
-          t.defaultGuestBusinessName,
-        );
-        setActiveBusiness(
-          freshGuestBiz.id,
-          freshGuestBiz.name,
-          freshGuestBiz.currency,
-        );
-      }
-
-      setUser(null);
-      setUnsyncedCount(0);
-      DeviceEventEmitter.emit("WORKSPACE_RESET");
-      onProfileChanged(null);
+      await resetWorkspaceToOnboarding();
     } finally {
       setIsBusy(false);
     }
@@ -431,24 +475,7 @@ setName("");
           setIsBusy(true);
           try {
             await deleteCurrentUserAccount();
-
-            if (Platform.OS !== "web") {
-              const db = getDbAdapter();
-              const freshGuestBiz = await clearLoggedInUserWorkspaceOnLogout(
-                db,
-                language === "bn" ? "আমার ব্যবসা" : "My Business",
-              );
-              setActiveBusiness(
-                freshGuestBiz.id,
-                freshGuestBiz.name,
-                freshGuestBiz.currency,
-              );
-            }
-
-            setUser(null);
-            setUnsyncedCount(0);
-            DeviceEventEmitter.emit("WORKSPACE_RESET");
-            onProfileChanged(null);
+            await resetWorkspaceToOnboarding();
             Alert.alert("Deleted", t.accountDeletedMsg);
           } catch (err: any) {
             Alert.alert("Error", err.message || "Could not delete account.");
@@ -459,7 +486,7 @@ setName("");
       },
     ]);
   };
-
+  
   return (
     <Modal
       visible={visible}

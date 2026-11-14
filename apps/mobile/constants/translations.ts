@@ -243,6 +243,12 @@ export const TRANSLATIONS = {
     todayBtn: "TODAY",
     greenDotHint: "Green dot indicates dates with transactions",
     defaultGuestBusinessName: "My Business",
+    onboardingLoginBtn: "Have an account? Login / Switch Account",
+    mergeGuestDataTitle: "Add Unsynced Business Data?",
+    mergeGuestDataMsg:
+      "You created business data while logged out. Do you want to add it to this account?",
+    yesAddBtn: "Yes, Add",
+    noDiscardBtn: "No, Discard",
   },
   bn: {
     // 1. Bottom Tab & Top Header Navigation
@@ -484,6 +490,12 @@ export const TRANSLATIONS = {
     todayBtn: "আজকের তারিখ",
     greenDotHint: "সবুজ বিন্দু থাকা তারিখগুলোতে লেনদেন রয়েছে",
     defaultGuestBusinessName: "আমার ব্যবসা",
+    onboardingLoginBtn: "অ্যাকাউন্ট আছে? লগইন বা পরিবর্তন করুন",
+    mergeGuestDataTitle: "লগইন ছাড়া লেখা হিসাব যুক্ত করবেন?",
+    mergeGuestDataMsg:
+      "লগআউট থাকা অবস্থায় আপনি নতুন ব্যবসা/হিসাব লিখেছেন। এগুলো কি এই অ্যাকাউন্টের সাথে যুক্ত করতে চান?",
+    yesAddBtn: "হ্যাঁ, যুক্ত করুন",
+    noDiscardBtn: "না, মুছে ফেলুন",
   },
 } as const;
 

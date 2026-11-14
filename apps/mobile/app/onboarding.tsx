@@ -2,10 +2,12 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  DeviceEventEmitter,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -17,6 +19,7 @@ import { getDbAdapter } from "../db/client";
 import { createBusiness } from "../db/businessQueries";
 import { syncNowWithCloud } from "../db/syncService";
 import { getCurrentUserProfile } from "../utils/userAuthService";
+import { UserAccountModal } from "../components/UserAccountModal";
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
 import { type CurrencyCode } from "../utils/formatCurrency";
@@ -25,15 +28,17 @@ import { getStrings } from "../constants/translations";
 export default function OnboardingScreen() {
   const router = useRouter();
   const themeMode = useUiStore((state) => state.themeMode);
+  const activeBusinessId = useUiStore((state) => state.activeBusinessId);
   const setActiveBusiness = useUiStore((state) => state.setActiveBusiness);
   const language = useUiStore((state) => state.language);
   const t = getStrings(language);
   const colors = getThemeColors(themeMode);
 
-const [businessName, setBusinessName] = useState("");
+  const [businessName, setBusinessName] = useState("");
   const [currency, setCurrency] = useState<CurrencyCode>("BDT");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [accountModalVisible, setAccountModalVisible] = useState(false);
 
   const handleCreateFirstBusiness = async () => {
     const trimmed = businessName.trim();
@@ -54,7 +59,9 @@ const [businessName, setBusinessName] = useState("");
         ownerUserId: currentUser?.id ?? null,
       });
 
-      setActiveBusiness(created.id, created.name, created.currency);
+setActiveBusiness(created.id, created.name, created.currency);
+      DeviceEventEmitter.emit("WORKSPACE_RESET");
+      DeviceEventEmitter.emit("LOCAL_DATA_MUTATED");
 
       if (currentUser) {
         void syncNowWithCloud().catch(() => {});
@@ -76,29 +83,42 @@ const [businessName, setBusinessName] = useState("");
     >
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        {/* Top Branding Section */}
-        <View style={styles.heroSection}>
-          <View
-            style={[
-              styles.logoBadge,
-              { backgroundColor: colors.darkHeaderAccent },
-            ]}
-          >
-            <Ionicons name="book" size={34} color={colors.activeTabIndicator} />
-          </View>
-          <Text style={styles.brandTitle}>HisabKhata</Text>
-          <Text style={styles.brandSubtitle}>{t.onboardingSubtitle}</Text>
-        </View>
-
-        {/* Bottom Form Card */}
-        <View
-          style={[styles.formCard, { backgroundColor: colors.cardSurface }]}
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: "space-between" }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={[styles.cardTitle, { color: colors.primaryTextDark }]}>
-            {t.onboardingCardTitle}
-          </Text>
+          {/* Top Branding Section */}
+          <View style={styles.heroSection}>
+            {activeBusinessId ? (
+              <Pressable
+                onPress={() => router.back()}
+                style={{ alignSelf: "flex-start", padding: 6, marginBottom: 4 }}
+              >
+                <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+              </Pressable>
+            ) : null}
+            <View
+              style={[
+                styles.logoBadge,
+                { backgroundColor: colors.darkHeaderAccent },
+              ]}
+            >
+              <Ionicons name="book" size={34} color={colors.activeTabIndicator} />
+            </View>
+            <Text style={styles.brandTitle}>HisabKhata</Text>
+            <Text style={styles.brandSubtitle}>{t.onboardingSubtitle}</Text>
+          </View>
+
+          {/* Bottom Form Card */}
+          <View
+            style={[styles.formCard, { backgroundColor: colors.cardSurface }]}
+          >
+            <Text style={[styles.cardTitle, { color: colors.primaryTextDark }]}>
+              {activeBusinessId ? t.addNewBusinessTitle : t.onboardingCardTitle}
+            </Text>
           <Text
             style={[
               styles.cardDescription,
@@ -258,16 +278,55 @@ const [businessName, setBusinessName] = useState("");
               },
             ]}
           >
-            {isSaving ? (
+{isSaving ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <>
-                <Text style={styles.submitButtonText}>{t.startUsingBtn}</Text>
+                <Text style={styles.submitButtonText}>
+                  {activeBusinessId ? t.createBusinessBtn : t.startUsingBtn}
+                </Text>
                 <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
               </>
             )}
           </Pressable>
+
+          {!activeBusinessId && (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setAccountModalVisible(true)}
+              style={{
+                marginTop: 16,
+                paddingVertical: 10,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
+              <Ionicons
+                name="person-circle-outline"
+                size={20}
+                color={colors.primaryBlue}
+              />
+              <Text
+                style={{
+                  color: colors.primaryBlue,
+                  fontSize: 13,
+                  fontFamily: "Inter_700Bold",
+                }}
+              >
+                {t.onboardingLoginBtn}
+              </Text>
+            </Pressable>
+          )}
         </View>
+        </ScrollView>
+
+        <UserAccountModal
+          visible={accountModalVisible}
+          onClose={() => setAccountModalVisible(false)}
+          onProfileChanged={() => {}}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
