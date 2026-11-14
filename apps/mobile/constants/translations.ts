@@ -242,6 +242,7 @@ export const TRANSLATIONS = {
     selectDateTitle: "Select Transaction Date",
     todayBtn: "TODAY",
     greenDotHint: "Green dot indicates dates with transactions",
+    defaultGuestBusinessName: "My Business",
   },
   bn: {
     // 1. Bottom Tab & Top Header Navigation
@@ -482,6 +483,7 @@ export const TRANSLATIONS = {
     selectDateTitle: "লেনদেনের তারিখ নির্বাচন করুন",
     todayBtn: "আজকের তারিখ",
     greenDotHint: "সবুজ বিন্দু থাকা তারিখগুলোতে লেনদেন রয়েছে",
+    defaultGuestBusinessName: "আমার ব্যবসা",
   },
 } as const;
 

@@ -257,25 +257,37 @@ export async function claimLocalBusinessesForUser(
   let claimedCount = 0;
 
   await db.withTransactionAsync(async () => {
-    // Check if there are businesses belonging to a DIFFERENT previous user on this device
+    // 1. Check if there are businesses belonging to a DIFFERENT previous user on this device
     const otherUserBiz = await db.getFirstAsync<{ id: string }>(
       `SELECT id FROM businesses WHERE owner_user_id IS NOT NULL AND owner_user_id != ? LIMIT 1;`,
       [serverUserId],
     );
 
     if (otherUserBiz) {
-      // Remove synced records belonging to the previous user (foreign keys ON DELETE CASCADE cleans child rows)
       await db.runAsync(
-        `DELETE FROM businesses WHERE owner_user_id IS NOT NULL AND owner_user_id != ? AND is_synced = 1;`,
+        `DELETE FROM businesses WHERE owner_user_id IS NOT NULL AND owner_user_id != ?;`,
         [serverUserId],
       );
-      // Reset pull cursor so this new user pulls their own full ledger from the server
       await db.runAsync(
         `UPDATE sync_state SET last_pulled_cursor = NULL, last_pushed_at = 0 WHERE business_id = 'GLOBAL';`,
       );
     }
 
-    // Claim any unowned Guest businesses (owner_user_id IS NULL) created while logged out
+    // 2. Remove empty guest placeholder businesses (0 customers and 0 cashbook entries)
+    // so logging in never auto-adds 'আমার ব্যবসা' / 'My Business' to a new or existing account.
+    await db.runAsync(
+      `DELETE FROM businesses
+       WHERE owner_user_id IS NULL
+         AND name IN ('আমার ব্যবসা', 'My Business')
+         AND NOT EXISTS (
+           SELECT 1 FROM customers c WHERE c.business_id = businesses.id AND c.is_deleted = 0
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM cashbook_entries ce WHERE ce.business_id = businesses.id AND ce.is_deleted = 0
+         );`,
+    );
+
+    // 3. Claim any remaining Guest businesses where the user actually added data while offline
     const res = await db.runAsync(
       `UPDATE businesses
        SET owner_user_id = ?,
@@ -287,7 +299,6 @@ export async function claimLocalBusinessesForUser(
     claimedCount = res.changes;
 
     if (claimedCount > 0) {
-      // Ensure child rows of newly claimed businesses are also marked unsynced
       await db.runAsync(
         `UPDATE customers SET is_synced = 0 WHERE business_id IN (SELECT id FROM businesses WHERE owner_user_id = ?);`,
         [serverUserId],

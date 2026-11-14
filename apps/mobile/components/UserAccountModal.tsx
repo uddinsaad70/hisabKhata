@@ -15,6 +15,7 @@ import {
   ScrollView,
   DeviceEventEmitter,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as SecureStore from "expo-secure-store";
@@ -56,6 +57,7 @@ export function UserAccountModal({
   onClose,
   onProfileChanged,
 }: UserAccountModalProps) {
+  const router = useRouter();
   const themeMode = useUiStore((state) => state.themeMode);
   const language = useUiStore((state) => state.language);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
@@ -102,11 +104,44 @@ export function UserAccountModal({
     }
   };
 
-  useEffect(() => {
+useEffect(() => {
     if (visible) {
       void refreshState();
     }
   }, [visible, activeBusinessId]);
+
+  const finalizeLoginAndRoute = async (profile: UserProfile) => {
+    setUser(profile);
+    await syncNowWithCloud();
+
+    let hasExistingBusinesses = false;
+
+    if (Platform.OS !== "web") {
+      const db = getDbAdapter();
+      const businesses = await getAllBusinesses(db);
+      if (businesses.length > 0) {
+        hasExistingBusinesses = true;
+        setActiveBusiness(
+          businesses[0].id,
+          businesses[0].name,
+          businesses[0].currency,
+        );
+      } else {
+        setActiveBusiness(null as any, "", "BDT");
+      }
+    }
+
+    DeviceEventEmitter.emit("WORKSPACE_RESET");
+    onProfileChanged(profile);
+    await refreshState();
+    onClose();
+
+    if (hasExistingBusinesses) {
+      router.replace("/(tabs)");
+    } else {
+      router.replace("/onboarding" as any);
+    }
+  };
 
   /**
    * Opens Google's official OAuth account chooser using our nip.io web bridge.
@@ -209,24 +244,7 @@ export function UserAccountModal({
 
       if (resolvedToken) {
         const profile = await loginWithGoogleToken(resolvedToken);
-        setUser(profile);
-        await syncNowWithCloud();
-
-        if (Platform.OS !== "web") {
-          const db = getDbAdapter();
-          const businesses = await getAllBusinesses(db);
-          if (businesses.length > 0) {
-            setActiveBusiness(
-              businesses[0].id,
-              businesses[0].name,
-              businesses[0].currency,
-            );
-          }
-        }
-
-        DeviceEventEmitter.emit("WORKSPACE_RESET");
-        onProfileChanged(profile);
-        await refreshState();
+        await finalizeLoginAndRoute(profile);
       }
     } catch (err: any) {
       Alert.alert(
@@ -342,29 +360,12 @@ const handlePickPhoto = (forLoggedInUser: boolean) => {
         });
       }
 
-      setUser(profile);
-      setName("");
+setName("");
       setIdentifier("");
       setPassword("");
       setDraftAvatarBase64(null);
 
-      await syncNowWithCloud();
-
-      if (Platform.OS !== "web") {
-        const db = getDbAdapter();
-        const businesses = await getAllBusinesses(db);
-        if (businesses.length > 0) {
-          setActiveBusiness(
-            businesses[0].id,
-            businesses[0].name,
-            businesses[0].currency,
-          );
-        }
-      }
-
-      DeviceEventEmitter.emit("WORKSPACE_RESET");
-      onProfileChanged(profile);
-      await refreshState();
+      await finalizeLoginAndRoute(profile);
     } catch (err: any) {
       Alert.alert("Authentication Error", err.message || "Please try again.");
     } finally {
@@ -398,7 +399,7 @@ const handlePickPhoto = (forLoggedInUser: boolean) => {
         const db = getDbAdapter();
         const freshGuestBiz = await clearLoggedInUserWorkspaceOnLogout(
           db,
-          language === "bn" ? "আমার ব্যবসা" : "My Business",
+          t.defaultGuestBusinessName,
         );
         setActiveBusiness(
           freshGuestBiz.id,

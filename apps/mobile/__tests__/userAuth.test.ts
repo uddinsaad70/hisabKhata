@@ -26,10 +26,11 @@ describe("CP26: First-Login Local Business Ownership Claim", () => {
     );
 
     expect(claimedCount).toBe(2);
-    expect(executedQueries).toHaveLength(4);
-    expect(executedQueries[0].sql).toContain("SET owner_user_id = ?");
-    expect(executedQueries[0].sql).toContain("is_synced = 0");
-    expect(executedQueries[0].sql).toContain("WHERE owner_user_id IS NULL");
-    expect(executedQueries[0].params[0]).toBe(serverUserId);
+    expect(executedQueries).toHaveLength(5);
+    expect(executedQueries[0].sql).toContain("DELETE FROM businesses");
+    expect(executedQueries[1].sql).toContain("SET owner_user_id = ?");
+    expect(executedQueries[1].sql).toContain("is_synced = 0");
+    expect(executedQueries[1].sql).toContain("WHERE owner_user_id IS NULL");
+    expect(executedQueries[1].params[0]).toBe(serverUserId);
   });
 });

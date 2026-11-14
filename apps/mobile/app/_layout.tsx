@@ -80,13 +80,19 @@ export default function RootLayout() {
     };
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
     if ((!fontsLoaded && !fontError) || !dbInitialized) return;
 
-    const inOnboarding = (segments[0] as string) === "onboarding";
-    if (needsOnboarding && !activeBusinessId && !inOnboarding) {
+    const currentRoute = segments[0] as string;
+    const inOnboarding = currentRoute === "onboarding";
+    const inGoogleAuth = currentRoute === "google-auth";
+
+    if (inGoogleAuth) return;
+
+    if ((needsOnboarding || !activeBusinessId) && !inOnboarding) {
       router.replace("/onboarding" as any);
     } else if (activeBusinessId && inOnboarding) {
+      setNeedsOnboarding(false);
       router.replace("/(tabs)");
     }
   }, [
@@ -142,6 +148,7 @@ export default function RootLayout() {
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="google-auth" options={{ headerShown: false }} />
       </Stack>
     </AppLockGate>
   );

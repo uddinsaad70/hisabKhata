@@ -15,6 +15,8 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getDbAdapter } from "../db/client";
 import { createBusiness } from "../db/businessQueries";
+import { syncNowWithCloud } from "../db/syncService";
+import { getCurrentUserProfile } from "../utils/userAuthService";
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
 import { type CurrencyCode } from "../utils/formatCurrency";
@@ -28,7 +30,7 @@ export default function OnboardingScreen() {
   const t = getStrings(language);
   const colors = getThemeColors(themeMode);
 
-  const [businessName, setBusinessName] = useState("Amar Dokan");
+const [businessName, setBusinessName] = useState("");
   const [currency, setCurrency] = useState<CurrencyCode>("BDT");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -36,7 +38,7 @@ export default function OnboardingScreen() {
   const handleCreateFirstBusiness = async () => {
     const trimmed = businessName.trim();
     if (!trimmed) {
-      setErrorMsg("Please enter your business or shop name.");
+      setErrorMsg(t.enterBusinessNameError);
       return;
     }
 
@@ -44,16 +46,24 @@ export default function OnboardingScreen() {
       setIsSaving(true);
       setErrorMsg(null);
       const db = await getDbAdapter();
+      const currentUser = await getCurrentUserProfile();
+
       const created = await createBusiness(db, {
         name: trimmed,
         currency,
+        ownerUserId: currentUser?.id ?? null,
       });
 
       setActiveBusiness(created.id, created.name, created.currency);
+
+      if (currentUser) {
+        void syncNowWithCloud().catch(() => {});
+      }
+
       router.replace("/(tabs)");
     } catch (err) {
       setErrorMsg(
-        err instanceof Error ? err.message : "Failed to create business.",
+        err instanceof Error ? err.message : t.enterBusinessNameError,
       );
     } finally {
       setIsSaving(false);
