@@ -676,33 +676,10 @@ export async function syncNowWithCloud(): Promise<FullSyncSummary | null> {
       }
 
       // Ensure the user has an active business selected after pull/sync (never hardcode "Amar Dokan")
-      let businesses = await getAllBusinesses(db);
+      // If user has businesses after sync, select one; if 0 businesses, clear active business so app routes to /onboarding
+      const businesses = await getAllBusinesses(db);
       if (businesses.length === 0) {
-        const currentUiName = useUiStore.getState().activeBusinessName?.trim();
-        const fallbackName =
-          currentUiName && currentUiName !== "Amar Dokan"
-            ? currentUiName
-            : `${user.name.split(" ")[0]}'s Business`;
-
-        const defaultBiz = await createBusiness(db, {
-          name: fallbackName,
-          currency: useUiStore.getState().activeBusinessCurrency || "BDT",
-          ownerUserId: user.id,
-        });
-        const extraSync = await runFullSyncCycle(
-          db,
-          createHttpSyncTransport(),
-          user.id,
-        );
-        summary.pushedCount += extraSync.pushedCount;
-        businesses = await getAllBusinesses(db);
-        useUiStore
-          .getState()
-          .setActiveBusiness(
-            defaultBiz.id,
-            defaultBiz.name,
-            defaultBiz.currency,
-          );
+        useUiStore.getState().setActiveBusiness(null as any, "", "BDT");
       } else {
         const currentActiveId = useUiStore.getState().activeBusinessId;
         const matched = businesses.find((b) => b.id === currentActiveId);
