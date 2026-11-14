@@ -18,6 +18,13 @@ const REFRESH_TOKEN_KEY = "hk_refresh_token_v1";
 const DEVICE_ID_KEY = "hk_device_id_v1";
 const USER_PROFILE_CACHE_KEY = "hk_user_profile_cache_v1";
 const POST_LOGOUT_GUEST_KEY = "hk_post_logout_guest_v1";
+const PENDING_LOGOUT_SYNC_KEY = "hk_pending_logout_sync_v1";
+
+export interface PendingLogoutSyncSession {
+  userId: string;
+  accessToken: string;
+  refreshToken: string;
+}
 
 export async function isPostLogoutGuestSession(): Promise<boolean> {
   if (Platform.OS === "web") return false;
@@ -31,6 +38,58 @@ export async function setPostLogoutGuestSession(active: boolean): Promise<void> 
     await SecureStore.setItemAsync(POST_LOGOUT_GUEST_KEY, "true");
   } else {
     await SecureStore.deleteItemAsync(POST_LOGOUT_GUEST_KEY);
+  }
+}
+
+export async function savePendingLogoutSyncSession(): Promise<void> {
+  if (Platform.OS === "web") return;
+  const profile = await getCurrentUserProfile();
+  const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+  const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+  if (profile && accessToken && refreshToken) {
+    const payload: PendingLogoutSyncSession = {
+      userId: profile.id,
+      accessToken,
+      refreshToken,
+    };
+    await SecureStore.setItemAsync(
+      PENDING_LOGOUT_SYNC_KEY,
+      JSON.stringify(payload),
+    );
+  }
+}
+
+export async function getPendingLogoutSyncSession(): Promise<PendingLogoutSyncSession | null> {
+  if (Platform.OS === "web") return null;
+  try {
+    const raw = await SecureStore.getItemAsync(PENDING_LOGOUT_SYNC_KEY);
+    return raw ? (JSON.parse(raw) as PendingLogoutSyncSession) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearPendingLogoutSyncSession(): Promise<void> {
+  if (Platform.OS === "web") return;
+  await SecureStore.deleteItemAsync(PENDING_LOGOUT_SYNC_KEY);
+}
+
+export async function wakeUpCloudServer(
+  timeoutMs: number = 45000,
+): Promise<boolean> {
+  const baseUrl = getApiBaseUrl();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${baseUrl}/health`, {
+      method: "GET",
+      signal: controller.signal,
+    });
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

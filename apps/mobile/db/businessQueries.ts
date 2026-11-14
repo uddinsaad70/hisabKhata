@@ -63,7 +63,50 @@ function validateCurrency(currency: string): CurrencyCode {
  */
 export async function getAllBusinesses(
   db: DatabaseAdapter,
+  ownerUserId?: string | null,
 ): Promise<BusinessWithCount[]> {
+  if (ownerUserId !== undefined) {
+    if (ownerUserId === null) {
+      return db.getAllAsync<BusinessWithCount>(
+        `SELECT
+           b.id,
+           b.owner_user_id,
+           b.name,
+           b.currency,
+           b.created_at,
+           b.updated_at,
+           b.is_deleted,
+           b.is_synced,
+           COUNT(c.id) AS customer_count
+         FROM businesses b
+         LEFT JOIN customers c
+           ON c.business_id = b.id AND c.is_deleted = 0
+         WHERE b.is_deleted = 0 AND b.owner_user_id IS NULL
+         GROUP BY b.id
+         ORDER BY b.created_at ASC, b.id ASC;`,
+      );
+    }
+    return db.getAllAsync<BusinessWithCount>(
+      `SELECT
+         b.id,
+         b.owner_user_id,
+         b.name,
+         b.currency,
+         b.created_at,
+         b.updated_at,
+         b.is_deleted,
+         b.is_synced,
+         COUNT(c.id) AS customer_count
+       FROM businesses b
+       LEFT JOIN customers c
+         ON c.business_id = b.id AND c.is_deleted = 0
+       WHERE b.is_deleted = 0 AND (b.owner_user_id = ? OR b.owner_user_id IS NULL)
+       GROUP BY b.id
+       ORDER BY b.created_at ASC, b.id ASC;`,
+      [ownerUserId],
+    );
+  }
+
   return db.getAllAsync<BusinessWithCount>(
     `SELECT
        b.id,

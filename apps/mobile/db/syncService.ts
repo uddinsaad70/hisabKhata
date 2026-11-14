@@ -18,8 +18,11 @@ import { type CashbookEntryRow } from "./cashbookQueries";
 import { generateId } from "../utils/uuid";
 import { roundMoney } from "../utils/formatCurrency";
 import {
+  clearPendingLogoutSyncSession,
   getApiBaseUrl,
   getCurrentUserProfile,
+  getOrCreateDeviceId,
+  getPendingLogoutSyncSession,
   getValidAccessToken,
   refreshSessionTokens,
   updateActiveUserProfile,
@@ -133,7 +136,7 @@ async function authorizedFetch(
 
   const doRequest = async (bearer: string) => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15000);
+    const timer = setTimeout(() => controller.abort(), 60000);
     try {
       return await fetch(url, {
         ...options,
@@ -227,6 +230,7 @@ const MAX_BATCH_SIZE = 200;
 export async function collectUnsyncedBatch(
   db: DatabaseAdapter,
   maxRows: number = MAX_BATCH_SIZE,
+  ownerUserId: string | null = null,
 ): Promise<{ payload: SyncPushChangesPayload; totalRows: number }> {
   let remaining = maxRows;
 
@@ -238,10 +242,15 @@ export async function collectUnsyncedBatch(
   };
 
   if (remaining > 0) {
-    const bizRows = await db.getAllAsync<BusinessRow>(
-      `SELECT * FROM businesses WHERE is_synced = 0 ORDER BY created_at ASC LIMIT ?;`,
-      [remaining],
-    );
+    const bizRows = ownerUserId
+      ? await db.getAllAsync<BusinessRow>(
+          `SELECT * FROM businesses WHERE is_synced = 0 AND owner_user_id = ? ORDER BY created_at ASC LIMIT ?;`,
+          [ownerUserId, remaining],
+        )
+      : await db.getAllAsync<BusinessRow>(
+          `SELECT * FROM businesses WHERE is_synced = 0 ORDER BY created_at ASC LIMIT ?;`,
+          [remaining],
+        );
     for (const b of bizRows) {
       payload.businesses.push({
         id: b.id,
@@ -256,10 +265,15 @@ export async function collectUnsyncedBatch(
   }
 
   if (remaining > 0) {
-    const custRows = await db.getAllAsync<CustomerRow>(
-      `SELECT * FROM customers WHERE is_synced = 0 ORDER BY created_at ASC LIMIT ?;`,
-      [remaining],
-    );
+    const custRows = ownerUserId
+      ? await db.getAllAsync<CustomerRow>(
+          `SELECT * FROM customers WHERE is_synced = 0 AND business_id IN (SELECT id FROM businesses WHERE owner_user_id = ?) ORDER BY created_at ASC LIMIT ?;`,
+          [ownerUserId, remaining],
+        )
+      : await db.getAllAsync<CustomerRow>(
+          `SELECT * FROM customers WHERE is_synced = 0 ORDER BY created_at ASC LIMIT ?;`,
+          [remaining],
+        );
     for (const c of custRows) {
       payload.customers.push({
         id: c.id,
@@ -276,10 +290,15 @@ export async function collectUnsyncedBatch(
   }
 
   if (remaining > 0) {
-    const ceRows = await db.getAllAsync<CustomerEntryRow>(
-      `SELECT * FROM customer_entries WHERE is_synced = 0 ORDER BY created_at ASC LIMIT ?;`,
-      [remaining],
-    );
+    const ceRows = ownerUserId
+      ? await db.getAllAsync<CustomerEntryRow>(
+          `SELECT * FROM customer_entries WHERE is_synced = 0 AND business_id IN (SELECT id FROM businesses WHERE owner_user_id = ?) ORDER BY created_at ASC LIMIT ?;`,
+          [ownerUserId, remaining],
+        )
+      : await db.getAllAsync<CustomerEntryRow>(
+          `SELECT * FROM customer_entries WHERE is_synced = 0 ORDER BY created_at ASC LIMIT ?;`,
+          [remaining],
+        );
     for (const ce of ceRows) {
       payload.customerEntries.push({
         id: ce.id,
@@ -300,10 +319,15 @@ export async function collectUnsyncedBatch(
   }
 
   if (remaining > 0) {
-    const cbRows = await db.getAllAsync<CashbookEntryRow>(
-      `SELECT * FROM cashbook_entries WHERE is_synced = 0 ORDER BY created_at ASC LIMIT ?;`,
-      [remaining],
-    );
+    const cbRows = ownerUserId
+      ? await db.getAllAsync<CashbookEntryRow>(
+          `SELECT * FROM cashbook_entries WHERE is_synced = 0 AND business_id IN (SELECT id FROM businesses WHERE owner_user_id = ?) ORDER BY created_at ASC LIMIT ?;`,
+          [ownerUserId, remaining],
+        )
+      : await db.getAllAsync<CashbookEntryRow>(
+          `SELECT * FROM cashbook_entries WHERE is_synced = 0 ORDER BY created_at ASC LIMIT ?;`,
+          [remaining],
+        );
     for (const cb of cbRows) {
       payload.cashbookEntries.push({
         id: cb.id,
@@ -515,11 +539,12 @@ export async function runFullSyncCycle(
   let conflictsResolved = 0;
   let resyncedFromScratch = false;
 
-  // 1. Push Phase
+// 1. Push Phase
   while (true) {
     const { payload, totalRows } = await collectUnsyncedBatch(
       db,
       MAX_BATCH_SIZE,
+      ownerUserId,
     );
     if (totalRows === 0) {
       break;
@@ -628,6 +653,82 @@ let activeSyncPromise: Promise<FullSyncSummary | null> | null = null;
  * High-level helper used by UI screens and background triggers to sync the logged-in user's data.
  * Prevents concurrent overlapping sync runs, isolates multi-user accounts, and heals missing parent businesses.
  */
+export async function flushPendingLogoutSyncIfNeeded(): Promise<void> {
+  if (Platform.OS === "web") return;
+  const pending = await getPendingLogoutSyncSession();
+  if (!pending) return;
+
+  try {
+    const db = getDbAdapter();
+    const syncState = await getOrInitDeviceSyncState(db);
+    const baseUrl = getApiBaseUrl();
+    let bearer = pending.accessToken;
+
+    while (true) {
+      const { payload, totalRows } = await collectUnsyncedBatch(
+        db,
+        MAX_BATCH_SIZE,
+        pending.userId,
+      );
+      if (totalRows === 0) break;
+
+      let res = await fetch(`${baseUrl}/sync/push`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${bearer}`,
+          "Idempotency-Key": generateId(),
+        },
+        body: JSON.stringify({
+          deviceId: syncState.device_id,
+          changes: payload,
+        }),
+      });
+
+      if (res.status === 401) {
+        const deviceId = await getOrCreateDeviceId();
+        const refRes = await fetch(`${baseUrl}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            refreshToken: pending.refreshToken,
+            deviceId,
+          }),
+        });
+        if (!refRes.ok) break;
+        const refData = await refRes.json();
+        bearer = refData.accessToken;
+        res = await fetch(`${baseUrl}/sync/push`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${bearer}`,
+            "Idempotency-Key": generateId(),
+          },
+          body: JSON.stringify({
+            deviceId: syncState.device_id,
+            changes: payload,
+          }),
+        });
+      }
+
+      if (!res.ok) return;
+      const pushRes = (await res.json()) as SyncPushResponse;
+      await markAcceptedIdsAsSynced(db, pushRes.accepted);
+    }
+
+    const currentUser = await getCurrentUserProfile();
+    if (!currentUser || currentUser.id !== pending.userId) {
+      await db.runAsync(`DELETE FROM businesses WHERE owner_user_id = ?;`, [
+        pending.userId,
+      ]);
+    }
+    await clearPendingLogoutSyncSession();
+  } catch {
+    // Keep pending session for next online moment
+  }
+}
+
 export async function syncNowWithCloud(): Promise<FullSyncSummary | null> {
   if (Platform.OS === "web") return null;
   if (activeSyncPromise) {
@@ -636,6 +737,8 @@ export async function syncNowWithCloud(): Promise<FullSyncSummary | null> {
 
   activeSyncPromise = (async () => {
     try {
+      await flushPendingLogoutSyncIfNeeded();
+
       const user = await getCurrentUserProfile();
       const token = await getValidAccessToken();
       if (!user || !token) {
@@ -675,10 +778,8 @@ export async function syncNowWithCloud(): Promise<FullSyncSummary | null> {
         }
       }
 
-      // Ensure the user has an active business selected after pull/sync (never hardcode "Amar Dokan")
       // If user has businesses after sync, select one; if 0 businesses, clear active business so app routes to /onboarding
-      const businesses = await getAllBusinesses(db);
-      if (businesses.length === 0) {
+      const businesses = await getAllBusinesses(db, user.id);      if (businesses.length === 0) {
         useUiStore.getState().setActiveBusiness(null as any, "", "BDT");
       } else {
         const currentActiveId = useUiStore.getState().activeBusinessId;
