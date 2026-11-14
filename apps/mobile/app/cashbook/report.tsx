@@ -16,7 +16,7 @@ import {
 import { useRouter, useFocusEffect } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import { CustomCalendarModal } from "../../components/CustomCalendarModal";
 
 import { useUiStore } from "../../store/uiStore";
 import { getThemeColors } from "../../constants/theme";
@@ -220,32 +220,28 @@ export default function CashbookReportScreen() {
         </Pressable>
       </View>
 
-      {showStartPicker && (
-        <DateTimePicker
-          value={startDate}
-          mode="date"
-          display="default"
-          maximumDate={endDate}
-          onChange={(_e, date) => {
-            setShowStartPicker(Platform.OS === "ios");
-            if (date) setStartDate(date);
-          }}
-        />
-      )}
+      <CustomCalendarModal
+        visible={showStartPicker}
+        initialDate={startDate}
+        maximumDate={endDate}
+        onClose={() => setShowStartPicker(false)}
+        onSelectDate={(date) => {
+          setShowStartPicker(false);
+          setStartDate(date);
+        }}
+      />
 
-      {showEndPicker && (
-        <DateTimePicker
-          value={endDate}
-          mode="date"
-          display="default"
-          minimumDate={startDate}
-          maximumDate={new Date()}
-          onChange={(_e, date) => {
-            setShowEndPicker(Platform.OS === "ios");
-            if (date) setEndDate(date);
-          }}
-        />
-      )}
+      <CustomCalendarModal
+        visible={showEndPicker}
+        initialDate={endDate}
+        minimumDate={startDate}
+        maximumDate={new Date()}
+        onClose={() => setShowEndPicker(false)}
+        onSelectDate={(date) => {
+          setShowEndPicker(false);
+          setEndDate(date);
+        }}
+      />
 
       {/* Period Summary Strip */}
       <View

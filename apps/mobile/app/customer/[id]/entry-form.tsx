@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import { CustomCalendarModal } from "../../../components/CustomCalendarModal";
 
 import { useUiStore } from "../../../store/uiStore";
 import { getThemeColors } from "../../../constants/theme";
@@ -298,15 +298,16 @@ export default function CustomerEntryFormScreen() {
               />
             </Pressable>
 
-            {showDatePicker && (
-              <DateTimePicker
-                value={entryDate}
-                mode="date"
-                display="default"
-                maximumDate={new Date()} // Block future dates
-                onChange={onDateChange}
-              />
-            )}
+            <CustomCalendarModal
+              visible={showDatePicker}
+              initialDate={entryDate}
+              maximumDate={new Date()}
+              onClose={() => setShowDatePicker(false)}
+              onSelectDate={(selectedDate) => {
+                setShowDatePicker(false);
+                setEntryDate(selectedDate);
+              }}
+            />
           </>
         )}
       </View>

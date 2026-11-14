@@ -3,6 +3,8 @@ import { createInMemoryDatabaseAdapter } from "./testDbHelper";
 import { runMigrations } from "../migrations";
 import {
   createBusiness,
+  deleteBusiness,
+  clearLoggedInUserWorkspaceOnLogout,
   getAllBusinesses,
   getBusinessById,
   getOrInitDeviceSyncState,
@@ -138,6 +140,55 @@ describe("businessQueries on real in-memory SQLite", () => {
       expect(first.device_id).toMatch(/^01[9a]/);
       const second = await getOrInitDeviceSyncState(adapter);
       expect(second.device_id).toBe(first.device_id);
+    } finally {
+      close();
+    }
+  });
+
+  it("soft-deletes a business and its child records while preventing deletion of the last business", async () => {
+    const { adapter, close } = createInMemoryDatabaseAdapter();
+    try {
+      await runMigrations(adapter);
+
+      const biz1 = await createBusiness(adapter, { name: "Store 1" });
+
+      // Cannot delete when only 1 business exists
+      await expect(deleteBusiness(adapter, biz1.id)).rejects.toThrow(
+        "CANNOT_DELETE_LAST_BUSINESS",
+      );
+
+      const biz2 = await createBusiness(adapter, { name: "Store 2" });
+      const nextActive = await deleteBusiness(adapter, biz2.id);
+
+      expect(nextActive.id).toBe(biz1.id);
+      const remaining = await getAllBusinesses(adapter);
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].id).toBe(biz1.id);
+    } finally {
+      close();
+    }
+  });
+
+  it("clears cloud-owned businesses on logout and creates a fresh Guest business if needed", async () => {
+    const { adapter, close } = createInMemoryDatabaseAdapter();
+    try {
+      await runMigrations(adapter);
+
+      await createBusiness(adapter, {
+        name: "Cloud Store",
+        ownerUserId: "user_123",
+      });
+
+      const guestBiz = await clearLoggedInUserWorkspaceOnLogout(
+        adapter,
+        "My Business",
+      );
+      expect(guestBiz.name).toBe("My Business");
+      expect(guestBiz.owner_user_id).toBeNull();
+
+      const all = await getAllBusinesses(adapter);
+      expect(all).toHaveLength(1);
+      expect(all[0].owner_user_id).toBeNull();
     } finally {
       close();
     }
