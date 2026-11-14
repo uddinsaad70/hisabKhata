@@ -11,14 +11,16 @@ export default function GoogleAuthCallbackScreen() {
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
   const colors = getThemeColors(themeMode);
 
-  useEffect(() => {
+useEffect(() => {
     const timer = setTimeout(() => {
-      if (activeBusinessId) {
+      if (router.canGoBack()) {
+        router.back();
+      } else if (activeBusinessId) {
         router.replace("/(tabs)");
       } else {
         router.replace("/onboarding" as any);
       }
-    }, 100);
+    }, 50);
 
     return () => clearTimeout(timer);
   }, [activeBusinessId, router]);

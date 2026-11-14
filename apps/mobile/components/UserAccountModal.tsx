@@ -148,6 +148,7 @@ useEffect(() => {
 
     if (!shouldMerge) {
       await db.runAsync(`DELETE FROM businesses WHERE owner_user_id IS NULL;`);
+      setActiveBusiness(null as any, "", "BDT");
     }
   };
 
@@ -173,7 +174,6 @@ useEffect(() => {
       }
     }
 
-    DeviceEventEmitter.emit("WORKSPACE_RESET");
     onProfileChanged(profile);
     await refreshState();
     onClose();
@@ -183,6 +183,11 @@ useEffect(() => {
     } else {
       router.replace("/onboarding" as any);
     }
+
+    setTimeout(() => {
+      DeviceEventEmitter.emit("WORKSPACE_RESET");
+      DeviceEventEmitter.emit("SYNC_COMPLETED");
+    }, 80);
   };
 
   /**
