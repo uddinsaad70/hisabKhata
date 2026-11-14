@@ -20,10 +20,12 @@ import {
   deleteBusiness,
   getAllBusinesses,
 } from "../db/businessQueries";
+import { getCurrentUserProfile } from "../utils/userAuthService";
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
 import { type CurrencyCode } from "../utils/formatCurrency";
 import { getStrings } from "../constants/translations";
+import { useThemedAlert } from "./ThemedAlertModal";
 import { useEffect, useState } from "react";
 
 export interface BusinessSwitcherModalProps {
@@ -42,6 +44,7 @@ export function BusinessSwitcherModal({
   const language = useUiStore((state) => state.language);
   const t = getStrings(language);
   const colors = getThemeColors(themeMode);
+  const { showAlert, alertElement } = useThemedAlert();
 
   const [businesses, setBusinesses] = useState<BusinessWithCount[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,11 +53,15 @@ export function BusinessSwitcherModal({
   const [newCurrency, setNewCurrency] = useState<CurrencyCode>("BDT");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const loadBusinesses = async () => {
+const loadBusinesses = async () => {
     try {
       setLoading(true);
       const db = await getDbAdapter();
-      const rows = await getAllBusinesses(db);
+      const currentUser = await getCurrentUserProfile();
+      const rows = await getAllBusinesses(
+        db,
+        currentUser ? currentUser.id : null,
+      );
       setBusinesses(rows);
     } catch (err) {
       setErrorMsg(
@@ -108,13 +115,13 @@ export function BusinessSwitcherModal({
   };
 
 
-  const handleDeleteBusiness = (biz: BusinessWithCount) => {
+const handleDeleteBusiness = (biz: BusinessWithCount) => {
     if (businesses.length <= 1) {
-      Alert.alert(t.deleteBusinessConfirmTitle, t.cannotDeleteOnlyBusinessMsg);
+      showAlert(t.deleteBusinessConfirmTitle, t.cannotDeleteOnlyBusinessMsg);
       return;
     }
 
-    Alert.alert(
+    showAlert(
       t.deleteBusinessConfirmTitle,
       `${biz.name} — ${t.deleteBusinessConfirmMsg}`,
       [
@@ -126,8 +133,12 @@ export function BusinessSwitcherModal({
             try {
               setLoading(true);
               const db = await getDbAdapter();
+              const currentUser = await getCurrentUserProfile();
               const nextActive = await deleteBusiness(db, biz.id);
-              const updatedList = await getAllBusinesses(db);
+              const updatedList = await getAllBusinesses(
+                db,
+                currentUser ? currentUser.id : null,
+              );
               setBusinesses(updatedList);
 
               if (biz.id === activeBusinessId && nextActive) {
@@ -439,14 +450,14 @@ export function BusinessSwitcherModal({
                   </Text>
                 </Pressable>
               </View>
-            </>
+     </>
           )}
         </View>
+        {alertElement}
       </View>
     </Modal>
   );
 }
-
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,

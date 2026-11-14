@@ -13,6 +13,7 @@ import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { CustomCalendarModal } from "./CustomCalendarModal";
+import { useThemedAlert } from "./ThemedAlertModal";
 
 import { useUiStore } from "../store/uiStore";
 import { getThemeColors } from "../constants/theme";
@@ -37,6 +38,7 @@ export function CashbookTabView() {
   const language = useUiStore((state) => state.language);
   const t = getStrings(language);
   const colors = getThemeColors(themeMode);
+  const { showAlert, alertElement } = useThemedAlert();
 
   const [summary, setSummary] = useState<CashbookDashboardSummary | null>(null);
   const [allEntries, setAllEntries] = useState<CashbookEntryRow[]>([]);
@@ -162,10 +164,10 @@ const flashListRef = useRef<FlashListRef<CashbookEntryRow> | null>(null);
         // Ignore if layout measurement is still pending
       }
     } else {
-      Alert.alert(
-      t.noTransactionsOnDateTitle,
-      `${t.noCashbookEntriesOnDateMsg} ${targetDateStr}`,
-    );
+      showAlert(
+        t.noTransactionsOnDateTitle,
+        `${t.noCashbookEntriesOnDateMsg} ${targetDateStr}`,
+      );
     }
   };
 
@@ -793,6 +795,7 @@ ListHeaderComponent={
         </Pressable>
       </View>
       <UndoSnackbar />
+      {alertElement}
     </View>
   );
 }

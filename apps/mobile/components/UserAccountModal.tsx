@@ -34,17 +34,23 @@ import {
   loginWithGoogleToken,
   logoutUserAccount,
   registerUserAccount,
+  savePendingLogoutSyncSession,
   setPostLogoutGuestSession,
   updateActiveUserProfile,
+  wakeUpCloudServer,
   type UserProfile,
 } from "../utils/userAuthService";
 import { getDbAdapter } from "../db/client";
 import { getBusinessBackupStats } from "../utils/backupService";
-import { syncNowWithCloud } from "../db/syncService";
+import {
+  flushPendingLogoutSyncIfNeeded,
+  syncNowWithCloud,
+} from "../db/syncService";
 import {
   getAllBusinesses,
   clearLoggedInUserWorkspaceOnLogout,
 } from "../db/businessQueries";
+import { useThemedAlert } from "./ThemedAlertModal";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -66,6 +72,7 @@ export function UserAccountModal({
   const setActiveBusiness = useUiStore((state) => state.setActiveBusiness);
   const colors = getThemeColors(themeMode);
   const t = getStrings(language);
+  const { showAlert, alertElement } = useThemedAlert();
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [authTab, setAuthTab] = useState<"LOGIN" | "REGISTER">("LOGIN");
@@ -109,10 +116,11 @@ export function UserAccountModal({
 useEffect(() => {
     if (visible) {
       void refreshState();
+      void wakeUpCloudServer(30000);
     }
   }, [visible, activeBusinessId]);
 
-const resolveGuestBusinessesBeforeLogin = async (): Promise<void> => {
+  const resolveGuestBusinessesBeforeLogin = async (): Promise<void> => {
     if (Platform.OS === "web") return;
     const isPostLogout = await isPostLogoutGuestSession();
     if (!isPostLogout) return;
@@ -125,22 +133,17 @@ const resolveGuestBusinessesBeforeLogin = async (): Promise<void> => {
     if (guestCount === 0) return;
 
     const shouldMerge = await new Promise<boolean>((resolve) => {
-      Alert.alert(
-        t.mergeGuestDataTitle,
-        t.mergeGuestDataMsg,
-        [
-          {
-            text: t.noDiscardBtn,
-            style: "destructive",
-            onPress: () => resolve(false),
-          },
-          {
-            text: t.yesAddBtn,
-            onPress: () => resolve(true),
-          },
-        ],
-        { cancelable: false },
-      );
+      showAlert(t.mergeGuestDataTitle, t.mergeGuestDataMsg, [
+        {
+          text: t.noDiscardBtn,
+          style: "destructive",
+          onPress: () => resolve(false),
+        },
+        {
+          text: t.yesAddBtn,
+          onPress: () => resolve(true),
+        },
+      ]);
     });
 
     if (!shouldMerge) {
@@ -157,7 +160,7 @@ const resolveGuestBusinessesBeforeLogin = async (): Promise<void> => {
 
     if (Platform.OS !== "web") {
       const db = getDbAdapter();
-      const businesses = await getAllBusinesses(db);
+      const businesses = await getAllBusinesses(db, profile.id);
       if (businesses.length > 0) {
         hasExistingBusinesses = true;
         setActiveBusiness(
@@ -191,7 +194,7 @@ const resolveGuestBusinessesBeforeLogin = async (): Promise<void> => {
     if (isBusy) return;
 
     if (!googleClientId) {
-      Alert.alert(
+      showAlert(
         language === "bn"
           ? "Google Client ID প্রয়োজন"
           : "Google Client ID Required",
@@ -202,11 +205,14 @@ const resolveGuestBusinessesBeforeLogin = async (): Promise<void> => {
       return;
     }
 
-    setIsBusy(true);
+setIsBusy(true);
     let pollInterval: ReturnType<typeof setInterval> | null = null;
     let resolvedToken: string | null = null;
 
     try {
+      await wakeUpCloudServer(45000);
+      await flushPendingLogoutSyncIfNeeded();
+
       const sessionId = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
       const appReturnUrl = Linking.createURL("google-auth");
       const webRedirectUri = getGoogleOAuthBridgeUrl();
@@ -287,7 +293,7 @@ const resolveGuestBusinessesBeforeLogin = async (): Promise<void> => {
         await finalizeLoginAndRoute(profile);
       }
     } catch (err: any) {
-      Alert.alert(
+      showAlert(
         "Google Sign-In Error",
         err.message || "Could not complete Google sign-in.",
       );
@@ -311,7 +317,7 @@ const resolveGuestBusinessesBeforeLogin = async (): Promise<void> => {
         setUser(updated);
         onProfileChanged(updated);
       } catch (err: any) {
-        Alert.alert("Error", err.message || "Could not update photo.");
+        showAlert("Error", err.message || "Could not update photo.");
       } finally {
         setIsBusy(false);
       }
@@ -328,7 +334,7 @@ const resolveGuestBusinessesBeforeLogin = async (): Promise<void> => {
       if (source === "CAMERA") {
         const camPerm = await ImagePicker.requestCameraPermissionsAsync();
         if (!camPerm.granted) {
-          Alert.alert(t.cameraPermTitle, t.cameraPermMsg);
+          showAlert(t.cameraPermTitle, t.cameraPermMsg);
           return;
         }
 
@@ -346,7 +352,7 @@ const resolveGuestBusinessesBeforeLogin = async (): Promise<void> => {
       } else {
         const libPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!libPerm.granted) {
-          Alert.alert(t.galleryPermTitle, t.galleryPermMsg);
+          showAlert(t.galleryPermTitle, t.galleryPermMsg);
           return;
         }
 
@@ -363,7 +369,7 @@ const resolveGuestBusinessesBeforeLogin = async (): Promise<void> => {
         }
       }
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Could not open image picker.");
+      showAlert("Error", err.message || "Could not open image picker.");
     }
   };
 
@@ -374,7 +380,7 @@ const handlePickPhoto = (forLoggedInUser: boolean) => {
   const handleAuthSubmit = async () => {
     if (isBusy) return;
     if (!identifier.trim() || !password.trim()) {
-      Alert.alert(
+      showAlert(
         "Required Fields",
         language === "bn"
           ? "অনুগ্রহ করে ইমেইল এবং পাসওয়ার্ড দিন।"
@@ -383,8 +389,10 @@ const handlePickPhoto = (forLoggedInUser: boolean) => {
       return;
     }
 
-    setIsBusy(true);
+setIsBusy(true);
     try {
+      await wakeUpCloudServer(45000);
+      await flushPendingLogoutSyncIfNeeded();
       await resolveGuestBusinessesBeforeLogin();
 
       let profile: UserProfile;
@@ -409,7 +417,7 @@ setName("");
 
       await finalizeLoginAndRoute(profile);
     } catch (err: any) {
-      Alert.alert("Authentication Error", err.message || "Please try again.");
+      showAlert("Authentication Error", err.message || "Please try again.");
     } finally {
       setIsBusy(false);
     }
@@ -425,17 +433,29 @@ setName("");
       await refreshState();
       onProfileChanged(updated);
     } catch (err: any) {
-      Alert.alert("Sync Error", err.message || "Could not sync records.");
+      showAlert("Sync Error", err.message || "Could not sync records.");
     } finally {
       setIsSyncing(false);
     }
   };
 
-const resetWorkspaceToOnboarding = async () => {
+const resetWorkspaceToOnboarding = async (
+    preserveUnsyncedForUserId?: string,
+  ) => {
     if (Platform.OS !== "web") {
       const db = getDbAdapter();
       await db.withTransactionAsync(async () => {
-        await db.runAsync(`DELETE FROM businesses;`);
+        if (preserveUnsyncedForUserId) {
+          await db.runAsync(
+            `DELETE FROM businesses
+             WHERE is_synced = 1
+               AND NOT EXISTS (SELECT 1 FROM customers c WHERE c.business_id = businesses.id AND c.is_synced = 0)
+               AND NOT EXISTS (SELECT 1 FROM customer_entries ce WHERE ce.business_id = businesses.id AND ce.is_synced = 0)
+               AND NOT EXISTS (SELECT 1 FROM cashbook_entries cb WHERE cb.business_id = businesses.id AND cb.is_synced = 0);`,
+          );
+        } else {
+          await db.runAsync(`DELETE FROM businesses;`);
+        }
         await db.runAsync(
           `UPDATE sync_state SET last_pulled_cursor = NULL, last_pushed_at = 0 WHERE business_id = 'GLOBAL';`,
         );
@@ -454,8 +474,27 @@ const resetWorkspaceToOnboarding = async () => {
     if (isBusy) return;
     setIsBusy(true);
     try {
+      const currentUserId = user?.id;
+      await syncNowWithCloud().catch(() => {});
+
+      if (Platform.OS !== "web" && currentUserId) {
+        const db = getDbAdapter();
+        const row = await db.getFirstAsync<{ total: number }>(
+          `SELECT (
+            (SELECT COUNT(*) FROM businesses WHERE is_synced = 0 AND owner_user_id = ?) +
+            (SELECT COUNT(*) FROM customers WHERE is_synced = 0 AND business_id IN (SELECT id FROM businesses WHERE owner_user_id = ?)) +
+            (SELECT COUNT(*) FROM customer_entries WHERE is_synced = 0 AND business_id IN (SELECT id FROM businesses WHERE owner_user_id = ?)) +
+            (SELECT COUNT(*) FROM cashbook_entries WHERE is_synced = 0 AND business_id IN (SELECT id FROM businesses WHERE owner_user_id = ?))
+          ) as total;`,
+          [currentUserId, currentUserId, currentUserId, currentUserId],
+        );
+        if ((row?.total ?? 0) > 0) {
+          await savePendingLogoutSyncSession();
+        }
+      }
+
       await logoutUserAccount();
-      await resetWorkspaceToOnboarding();
+      await resetWorkspaceToOnboarding(currentUserId);
     } finally {
       setIsBusy(false);
     }
@@ -463,7 +502,7 @@ const resetWorkspaceToOnboarding = async () => {
 
   const handleDeleteAccount = () => {
     if (isBusy) return;
-    Alert.alert(t.deleteAccountConfirmTitle, t.deleteAccountConfirmMsg, [
+    showAlert(t.deleteAccountConfirmTitle, t.deleteAccountConfirmMsg, [
       {
         text: t.cancelBtn,
         style: "cancel",
@@ -476,9 +515,9 @@ const resetWorkspaceToOnboarding = async () => {
           try {
             await deleteCurrentUserAccount();
             await resetWorkspaceToOnboarding();
-            Alert.alert("Deleted", t.accountDeletedMsg);
+            showAlert("Deleted", t.accountDeletedMsg);
           } catch (err: any) {
-            Alert.alert("Error", err.message || "Could not delete account.");
+            showAlert("Error", err.message || "Could not delete account.");
           } finally {
             setIsBusy(false);
           }
@@ -486,7 +525,7 @@ const resetWorkspaceToOnboarding = async () => {
       },
     ]);
   };
-  
+
   return (
     <Modal
       visible={visible}
@@ -1060,6 +1099,7 @@ const resetWorkspaceToOnboarding = async () => {
             </View>
           )}
         </View>
+        {alertElement}
       </KeyboardAvoidingView>
     </Modal>
   );
