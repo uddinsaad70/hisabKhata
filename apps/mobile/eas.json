@@ -14,6 +14,10 @@
       "channel": "preview",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://hisabkhata-api.onrender.com",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "614799001641-lcs3smgg6d7tv5qo316muhups1ts23e4.apps.googleusercontent.com"
       }
     },
     "production": {
@@ -21,6 +25,10 @@
       "channel": "production",
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://hisabkhata-api.onrender.com",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "614799001641-lcs3smgg6d7tv5qo316muhups1ts23e4.apps.googleusercontent.com"
       }
     }
   },
