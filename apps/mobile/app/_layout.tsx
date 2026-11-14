@@ -20,6 +20,14 @@ import {
   getAllBusinesses,
   getOrInitDeviceSyncState,
 } from "../db/businessQueries";
+import {
+  getCurrentUserProfile,
+  wakeUpCloudServer,
+} from "../utils/userAuthService";
+import {
+  flushPendingLogoutSyncIfNeeded,
+  syncNowWithCloud,
+} from "../db/syncService";
 import { AppLockGate } from "../components/AppLockGate";
 
 export default function RootLayout() {
@@ -50,12 +58,24 @@ const t = getStrings(language);
   useEffect(() => {
     let isMounted = true;
 
-    async function setupDbAndBusiness() {
+async function setupDbAndBusiness() {
       try {
         await initializeAppDatabase();
         const db = await getDbAdapter();
         await getOrInitDeviceSyncState(db);
-        const businesses = await getAllBusinesses(db);
+
+        void wakeUpCloudServer(45000).then((awake) => {
+          if (awake) {
+            void flushPendingLogoutSyncIfNeeded();
+            void syncNowWithCloud().catch(() => {});
+          }
+        });
+
+        const currentUser = await getCurrentUserProfile();
+        const businesses = await getAllBusinesses(
+          db,
+          currentUser ? currentUser.id : null,
+        );
 
         if (!isMounted) return;
 
