@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { CustomCalendarModal } from "../../../components/CustomCalendarModal";
 
@@ -44,7 +45,7 @@ export default function CustomerEntryFormScreen() {
   }>();
   const isEditing = !!entryId;
   const router = useRouter();
-
+const insets = useSafeAreaInsets();
   const themeMode = useUiStore((state) => state.themeMode);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
   const activeBusinessCurrency = useUiStore(
@@ -332,11 +333,19 @@ export default function CustomerEntryFormScreen() {
       </View>
 
 {/* Custom Calculator Keypad */}
+      {/* Custom Calculator Keypad */}
+    <View
+      style={{
+        paddingBottom: Math.max(insets.bottom, 8),
+        backgroundColor: colors.cardSurface,
+      }}
+    >
       <CalculatorKeypad
         onKeyPress={handleKeyPress}
         onDelete={handleDelete}
         onEvaluate={handleEvaluate}
       />
+    </View>
 
       <TransactionSavedOverlay
         visible={savedAmountForOverlay !== null}

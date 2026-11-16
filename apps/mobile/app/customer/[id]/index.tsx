@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { Ionicons } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
@@ -36,6 +37,7 @@ import { getLocalDateString } from "../../../utils/dateUtils";
 export default function CustomerLedgerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const themeMode = useUiStore((state) => state.themeMode);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
   const activeBusinessCurrency = useUiStore(
@@ -313,7 +315,10 @@ const [customer, setCustomer] = useState<CustomerRow | null>(null);
           ref={flashListRef}
           data={entries}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 74 }}
+          contentContainerStyle={{
+            paddingHorizontal: 12,
+            paddingBottom: 78 + insets.bottom,
+          }}
           renderItem={({ item, index }) => {
             const showDateHeader =
               index === 0 || entries[index - 1].entry_date !== item.entry_date;
@@ -590,7 +595,13 @@ const [customer, setCustomer] = useState<CustomerRow | null>(null);
     />
 
 {/* Bottom Floating Action Buttons (matching Cashbook) */}
-      <View style={styles.bottomBar} pointerEvents="box-none">
+      <View
+      style={[
+        styles.bottomBar,
+        { bottom: Math.max(insets.bottom, 10) + 6 },
+      ]}
+      pointerEvents="box-none"
+      >
         <Pressable
           onPress={() =>
             router.push(

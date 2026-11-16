@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FlashList } from "@shopify/flash-list";
 import { Ionicons } from "@expo/vector-icons";
 import { CustomCalendarModal } from "../../components/CustomCalendarModal";
@@ -33,6 +34,7 @@ import { getStrings } from "../../constants/translations";
 export default function CustomerReportScreen() {
   const { customerId } = useLocalSearchParams<{ customerId?: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const themeMode = useUiStore((state) => state.themeMode);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
@@ -453,15 +455,16 @@ export default function CustomerReportScreen() {
       </View>
 
       {/* Bottom Sticky Action Bar for Save & Share PDF */}
-      <View
-        style={[
-          styles.footerBar,
-          {
-            backgroundColor: colors.cardSurface,
-            borderTopColor: colors.borderDivider,
-          },
-        ]}
-      >
+    <View
+      style={[
+        styles.footerBar,
+        {
+          backgroundColor: colors.cardSurface,
+          borderTopColor: colors.borderDivider,
+          paddingBottom: Math.max(insets.bottom, 12) + 8,
+        },
+      ]}
+    >
         <Pressable
           onPress={handleSavePdf}
           disabled={isExporting}
