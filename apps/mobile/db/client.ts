@@ -1,5 +1,5 @@
+// apps/mobile/db/client.ts
 import { Platform } from "react-native";
-import * as SQLite from "expo-sqlite";
 import { createExpoSqliteAdapter, type DatabaseAdapter } from "./adapter";
 import {
   getDatabaseHealth,
@@ -14,6 +14,10 @@ export const DATABASE_FILE_NAME = "hisabkhata.db";
 let adapterInstance: DatabaseAdapter | null = null;
 let initPromise: Promise<DatabaseHealthSummary> | null = null;
 let latestHealth: DatabaseHealthSummary | null = null;
+
+function getExpoSqlite(): typeof import("expo-sqlite") {
+  return require("expo-sqlite") as typeof import("expo-sqlite");
+}
 
 /**
  * Opens the local SQLite database on Android/iOS, runs pending migrations,
@@ -42,6 +46,7 @@ export async function initializeAppDatabase(): Promise<DatabaseHealthSummary> {
       return latestHealth;
     }
 
+    const SQLite = getExpoSqlite();
     const rawDb = await SQLite.openDatabaseAsync(DATABASE_FILE_NAME);
     adapterInstance = createExpoSqliteAdapter(rawDb);
     await runMigrations(adapterInstance);
@@ -76,6 +81,7 @@ export async function getDatabaseAdapter(): Promise<DatabaseAdapter> {
  */
 export function getDbAdapter(): DatabaseAdapter {
   if (!adapterInstance) {
+    const SQLite = getExpoSqlite();
     const rawDb = SQLite.openDatabaseSync(DATABASE_FILE_NAME);
     adapterInstance = createExpoSqliteAdapter(rawDb);
   }
