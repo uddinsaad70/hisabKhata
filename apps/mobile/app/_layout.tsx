@@ -1,7 +1,13 @@
 // apps/mobile/app/_layout.tsx
 import "react-native-get-random-values";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as Updates from "expo-updates";
 import { StatusBar } from "expo-status-bar";
@@ -29,18 +35,20 @@ import {
   syncNowWithCloud,
 } from "../db/syncService";
 import { AppLockGate } from "../components/AppLockGate";
+import OnboardingScreen from "./onboarding";
 
 export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
 
-const themeMode = useUiStore((state) => state.themeMode);
+  const themeMode = useUiStore((state) => state.themeMode);
   const language = useUiStore((state) => state.language);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
   const setActiveBusiness = useUiStore((state) => state.setActiveBusiness);
   const colors = getThemeColors(themeMode);
-const t = getStrings(language);
-  const [isDownloadingUpdate, setIsDownloadingUpdate] = useState<boolean>(false);
+  const t = getStrings(language);
+  const [isDownloadingUpdate, setIsDownloadingUpdate] =
+    useState<boolean>(false);
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
 
   // Load crisp Inter typography weights for fintech numbers and labels
@@ -58,7 +66,7 @@ const t = getStrings(language);
   useEffect(() => {
     let isMounted = true;
 
-async function setupDbAndBusiness() {
+    async function setupDbAndBusiness() {
       try {
         await initializeAppDatabase();
         const db = await getDbAdapter();
@@ -106,7 +114,7 @@ async function setupDbAndBusiness() {
     };
   }, []);
 
-const { isDownloading, isUpdatePending, availableUpdate } =
+  const { isDownloading, isUpdatePending, availableUpdate } =
     Updates.useUpdates();
 
   useEffect(() => {
@@ -139,27 +147,6 @@ const { isDownloading, isUpdatePending, availableUpdate } =
     }
   }, [isDownloading, isUpdatePending, availableUpdate]);
 
-  useEffect(() => {
-    if ((!fontsLoaded && !fontError) || !dbInitialized) return;
-
-    const currentRoute = segments[0] as string;
-    const inOnboarding = currentRoute === "onboarding";
-    const inGoogleAuth = currentRoute === "google-auth";
-
-    if (inGoogleAuth) return;
-
-    if (!activeBusinessId && !inOnboarding) {
-      router.replace("/onboarding" as any);
-    }
-  }, [
-    fontsLoaded,
-    fontError,
-    dbInitialized,
-    needsOnboarding,
-    activeBusinessId,
-    segments,
-  ]);
-
   if (dbError) {
     return (
       <View
@@ -178,7 +165,7 @@ const { isDownloading, isUpdatePending, availableUpdate } =
     );
   }
 
-if ((!fontsLoaded && !fontError) || !dbInitialized) {
+  if ((!fontsLoaded && !fontError) || !dbInitialized) {
     return (
       <View
         style={[styles.centerScreen, { backgroundColor: colors.primaryBlue }]}
@@ -188,7 +175,7 @@ if ((!fontsLoaded && !fontError) || !dbInitialized) {
     );
   }
 
-if (isDownloadingUpdate) {
+  if (isDownloadingUpdate) {
     return (
       <View
         style={[styles.centerScreen, { backgroundColor: colors.primaryBlue }]}
@@ -237,24 +224,31 @@ if (isDownloadingUpdate) {
     );
   }
 
+  const currentRoute = segments[0] as string;
+  const inGoogleAuth = currentRoute === "google-auth";
+
   return (
     <AppLockGate>
       <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          headerStyle: { backgroundColor: colors.primaryBlue },
-          headerTintColor: "#FFFFFF",
-          headerTitleStyle: {
-            fontFamily: "Inter_700Bold",
-          },
-          contentStyle: { backgroundColor: colors.pageBackgroundGrey },
-        }}
-      >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="google-auth" options={{ headerShown: false }} />
-      </Stack>
+      {!activeBusinessId && !inGoogleAuth ? (
+        <OnboardingScreen />
+      ) : (
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            headerStyle: { backgroundColor: colors.primaryBlue },
+            headerTintColor: "#FFFFFF",
+            headerTitleStyle: {
+              fontFamily: "Inter_700Bold",
+            },
+            contentStyle: { backgroundColor: colors.pageBackgroundGrey },
+          }}
+        >
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+          <Stack.Screen name="google-auth" options={{ headerShown: false }} />
+        </Stack>
+      )}
     </AppLockGate>
   );
 }

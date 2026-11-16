@@ -69,14 +69,18 @@ export default function HomeScreen() {
     }
   }, [activeBusinessId]);
 
-  useEffect(() => {
+useEffect(() => {
     initializeAppDatabase()
       .then(async (summary) => {
         setDbHealth(summary);
 
         if (!useUiStore.getState().activeBusinessId) {
           const db = getDbAdapter();
-          const businesses = await getAllBusinesses(db);
+          const currentUser = await getCurrentUserProfile();
+          const businesses = await getAllBusinesses(
+            db,
+            currentUser ? currentUser.id : null,
+          );
           if (businesses.length > 0) {
             useUiStore
               .getState()
@@ -90,7 +94,8 @@ export default function HomeScreen() {
         await refreshHeaderSyncStatus();
       })
       .catch(() => setDbHealth(null));
-  }, [refreshHeaderSyncStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useFocusEffect(
     useCallback(() => {

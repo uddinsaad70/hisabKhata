@@ -321,13 +321,13 @@ setActiveBusiness(created.id, created.name, created.currency);
           )}
         </View>
         </ScrollView>
-
-        <UserAccountModal
-          visible={accountModalVisible}
-          onClose={() => setAccountModalVisible(false)}
-          onProfileChanged={() => {}}
-        />
       </KeyboardAvoidingView>
+
+      <UserAccountModal
+        visible={accountModalVisible}
+        onClose={() => setAccountModalVisible(false)}
+        onProfileChanged={() => {}}
+      />
     </SafeAreaView>
   );
 }

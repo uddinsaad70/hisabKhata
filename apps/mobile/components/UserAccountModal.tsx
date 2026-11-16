@@ -1,7 +1,7 @@
 // apps/mobile/components/UserAccountModal.tsx
 import React, { useState, useEffect } from "react";
 import {
-  Modal,
+  BackHandler,
   View,
   Text,
   TextInput,
@@ -9,13 +9,14 @@ import {
   StyleSheet,
   Image,
   ActivityIndicator,
-  Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   DeviceEventEmitter,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as SecureStore from "expo-secure-store";
@@ -66,6 +67,7 @@ export function UserAccountModal({
   onProfileChanged,
 }: UserAccountModalProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const themeMode = useUiStore((state) => state.themeMode);
   const language = useUiStore((state) => state.language);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
@@ -113,11 +115,21 @@ export function UserAccountModal({
     }
   };
 
-useEffect(() => {
-    if (visible) {
-      void refreshState();
-      void wakeUpCloudServer(30000);
+  useEffect(() => {
+    if (!visible) {
+      return;
     }
+
+    void refreshState();
+    void wakeUpCloudServer(30000);
+
+    const backSub = BackHandler.addEventListener("hardwareBackPress", () => {
+      Keyboard.dismiss();
+      onClose();
+      return true;
+    });
+
+    return () => backSub.remove();
   }, [visible, activeBusinessId]);
 
   const resolveGuestBusinessesBeforeLogin = async (): Promise<void> => {
@@ -176,12 +188,11 @@ useEffect(() => {
 
     onProfileChanged(profile);
     await refreshState();
+    Keyboard.dismiss();
     onClose();
 
     if (hasExistingBusinesses) {
       router.replace("/(tabs)");
-    } else {
-      router.replace("/onboarding" as any);
     }
 
     setTimeout(() => {
@@ -190,11 +201,6 @@ useEffect(() => {
     }, 80);
   };
 
-  /**
-   * Opens Google's official OAuth account chooser using our nip.io web bridge.
-   * Simultaneously polls /auth/google/bridge-poll so the moment the user taps their Gmail,
-   * the browser closes automatically (or on button tap) and logs in immediately!
-   */
   const handleGooglePopupPress = async () => {
     if (isBusy) return;
 
@@ -210,7 +216,7 @@ useEffect(() => {
       return;
     }
 
-setIsBusy(true);
+    setIsBusy(true);
     let pollInterval: ReturnType<typeof setInterval> | null = null;
     let resolvedToken: string | null = null;
 
@@ -234,7 +240,6 @@ setIsBusy(true);
 
       const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${authParams.toString()}`;
 
-      // Start background polling so as soon as the bridge receives the token, we grab it and dismiss the browser!
       pollInterval = setInterval(async () => {
         try {
           const pollRes = await fetch(
@@ -275,7 +280,6 @@ setIsBusy(true);
           hashParams.get("id_token");
       }
 
-      // Final check against backend store in case user manually closed the browser tab with 'X' after clicking Continue
       if (!resolvedToken) {
         try {
           const finalPoll = await fetch(
@@ -378,10 +382,10 @@ setIsBusy(true);
     }
   };
 
-const handlePickPhoto = (forLoggedInUser: boolean) => {
+  const handlePickPhoto = (forLoggedInUser: boolean) => {
     setPhotoPickerTarget(forLoggedInUser ? "LOGGED_IN" : "REGISTER_DRAFT");
   };
-  
+
   const handleAuthSubmit = async () => {
     if (isBusy) return;
     if (!identifier.trim() || !password.trim()) {
@@ -394,7 +398,7 @@ const handlePickPhoto = (forLoggedInUser: boolean) => {
       return;
     }
 
-setIsBusy(true);
+    setIsBusy(true);
     try {
       await wakeUpCloudServer(45000);
       await flushPendingLogoutSyncIfNeeded();
@@ -415,7 +419,7 @@ setIsBusy(true);
         });
       }
 
-setName("");
+      setName("");
       setIdentifier("");
       setPassword("");
       setDraftAvatarBase64(null);
@@ -444,7 +448,7 @@ setName("");
     }
   };
 
-const resetWorkspaceToOnboarding = async (
+  const resetWorkspaceToOnboarding = async (
     preserveUnsyncedForUserId?: string,
   ) => {
     if (Platform.OS !== "web") {
@@ -466,13 +470,15 @@ const resetWorkspaceToOnboarding = async (
         );
       });
     }
-    setActiveBusiness(null as any, "", "BDT");
     setUser(null);
     setUnsyncedCount(0);
-    DeviceEventEmitter.emit("WORKSPACE_RESET");
     onProfileChanged(null);
+    Keyboard.dismiss();
     onClose();
-    router.replace("/onboarding" as any);
+    setTimeout(() => {
+      setActiveBusiness(null as any, "", "BDT");
+      DeviceEventEmitter.emit("WORKSPACE_RESET");
+    }, 60);
   };
 
   const handleLogout = async () => {
@@ -531,18 +537,23 @@ const resetWorkspaceToOnboarding = async (
     ]);
   };
 
+  if (!visible) {
+    return null;
+  }
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <View style={styles.overlayRoot}>
       <KeyboardAvoidingView
         style={styles.backdrop}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <Pressable style={styles.dismissArea} onPress={onClose} />
+        <Pressable
+          style={styles.dismissArea}
+          onPress={() => {
+            Keyboard.dismiss();
+            onClose();
+          }}
+        />
 
         <View
           style={[
@@ -550,6 +561,7 @@ const resetWorkspaceToOnboarding = async (
             {
               backgroundColor: colors.cardSurface,
               borderColor: colors.borderDivider,
+              paddingBottom: Math.max(insets.bottom, 16) + 12,
             },
           ]}
         >
@@ -565,7 +577,13 @@ const resetWorkspaceToOnboarding = async (
             >
               {t.accountAndSyncTitle}
             </Text>
-            <Pressable onPress={onClose} hitSlop={10}>
+            <Pressable
+              onPress={() => {
+                Keyboard.dismiss();
+                onClose();
+              }}
+              hitSlop={10}
+            >
               <Ionicons
                 name="close"
                 size={22}
@@ -575,9 +593,12 @@ const resetWorkspaceToOnboarding = async (
           </View>
 
           <ScrollView
-            showsVerticalScrollIndicator={false}
+            showsVerticalScrollIndicator={true}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingVertical: 16 }}
+            contentContainerStyle={{
+              paddingVertical: 14,
+              paddingBottom: 20,
+            }}
           >
             {user ? (
               /* LOGGED-IN PROFILE & SYNC DASHBOARD */
@@ -967,7 +988,7 @@ const resetWorkspaceToOnboarding = async (
             )}
           </ScrollView>
 
-          {/* Custom Styled Photo Source Picker Overlay (Replaces ugly system Alert) */}
+          {/* Custom Styled Photo Source Picker Overlay */}
           {photoPickerTarget !== null && (
             <View style={styles.photoPickerOverlay}>
               <Pressable
@@ -1106,11 +1127,16 @@ const resetWorkspaceToOnboarding = async (
         </View>
         {alertElement}
       </KeyboardAvoidingView>
-    </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  overlayRoot: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 9999,
+    elevation: 9999,
+  },
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
