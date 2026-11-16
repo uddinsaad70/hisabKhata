@@ -1,4 +1,5 @@
 // apps/mobile/app/cashbook/report.tsx
+// apps/mobile/app/cashbook/report.tsx
 import React, { useCallback, useState } from "react";
 import {
   Platform,
@@ -14,6 +15,7 @@ import {
   printOrSaveCashbookPdf,
 } from "../../utils/pdfGenerator";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FlashList } from "@shopify/flash-list";
 import { Ionicons } from "@expo/vector-icons";
 import { CustomCalendarModal } from "../../components/CustomCalendarModal";
@@ -25,12 +27,15 @@ import { formatCurrency } from "../../utils/formatCurrency";
 import { getLocalDateString } from "../../utils/dateUtils";
 import {
   getCashbookDailyReport,
+  getAllCashbookEntries,
   type CashbookDailyReportRow,
+  type CashbookEntryRow,
 } from "../../db/cashbookQueries";
 import { getStrings } from "../../constants/translations";
 
 export default function CashbookReportScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const themeMode = useUiStore((state) => state.themeMode);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
   const activeBusinessName = useUiStore((state) => state.activeBusinessName);
@@ -50,21 +55,28 @@ export default function CashbookReportScreen() {
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [rows, setRows] = useState<CashbookDailyReportRow[]>([]);
+  const [entriesInRange, setEntriesInRange] = useState<CashbookEntryRow[]>([]);
 
-  // Fetch date-wise daily report from SQLite
+  // Fetch date-wise daily report and individual entries from SQLite
   const loadReport = useCallback(async () => {
     if (!activeBusinessId || Platform.OS === "web") return;
     try {
       const db = await getDbAdapter();
       const startStr = getLocalDateString(startDate);
       const endStr = getLocalDateString(endDate);
-      const data = await getCashbookDailyReport(
-        db,
-        activeBusinessId,
-        startStr,
-        endStr,
+      const [data, allEntries] = await Promise.all([
+        getCashbookDailyReport(db, activeBusinessId, startStr, endStr),
+        getAllCashbookEntries(db, activeBusinessId),
+      ]);
+      const sortedRowsAsc = [...data].sort((a, b) =>
+        a.entry_date.localeCompare(b.entry_date),
       );
-      setRows(data);
+      setRows(sortedRowsAsc);
+      setEntriesInRange(
+        allEntries.filter(
+          (e) => e.entry_date >= startStr && e.entry_date <= endStr,
+        ),
+      );
     } catch (error) {
       console.error("Failed to load cashbook daily report:", error);
     }
@@ -101,6 +113,7 @@ export default function CashbookReportScreen() {
         totalOut: rangeSummary.totalOut,
         netBalance: rangeSummary.netBalance,
         rows,
+        entries: entriesInRange,
       });
     } catch (error) {
       console.error("Failed to share PDF:", error);
@@ -126,6 +139,7 @@ export default function CashbookReportScreen() {
         totalOut: rangeSummary.totalOut,
         netBalance: rangeSummary.netBalance,
         rows,
+        entries: entriesInRange,
       });
     } catch (error) {
       console.error("Failed to save/print PDF:", error);
@@ -438,6 +452,7 @@ export default function CashbookReportScreen() {
           {
             backgroundColor: colors.cardSurface,
             borderTopColor: colors.borderDivider,
+            paddingBottom: Math.max(insets.bottom, 12) + 8,
           },
         ]}
       >

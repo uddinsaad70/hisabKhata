@@ -2,7 +2,10 @@
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
-import { type CashbookDailyReportRow } from "../db/cashbookQueries";
+import {
+  type CashbookDailyReportRow,
+  type CashbookEntryRow,
+} from "../db/cashbookQueries";
 import { type CustomerReportEntryRow } from "../db/customerQueries";
 import { formatCurrency, type CurrencyCode } from "./formatCurrency";
 
@@ -15,11 +18,9 @@ export interface CashbookPdfReportParams {
   totalOut: number;
   netBalance: number;
   rows: CashbookDailyReportRow[];
+  entries?: CashbookEntryRow[];
 }
 
-/**
- * Helper to escape HTML special characters safely.
- */
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
@@ -29,8 +30,303 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#039;");
 }
 
+const SHORT_MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+function formatFullDateDisplay(dateStr: string): string {
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return dateStr;
+  const year = parts[0];
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const monthName = SHORT_MONTHS[monthIdx] || parts[1];
+  return `${day} ${monthName} ${year}`;
+}
+
+function formatShortDateDisplay(dateStr: string): string {
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return dateStr;
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const monthName = SHORT_MONTHS[monthIdx] || parts[1];
+  return `${day} ${monthName}`;
+}
+
+function getBusinessInitials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "HK";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return `${words[0][0]}${words[1][0]}`.toUpperCase();
+}
+
+function getSharedStatementStyles(): string {
+  return `
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #1F2937;
+      margin: 0;
+      padding: 0;
+      background-color: #FFFFFF;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .page-wrap {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .top-banner {
+      background-color: #1D4273;
+      color: #FFFFFF;
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .biz-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .biz-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 19px;
+      background-color: #108944;
+      border: 2px solid rgba(255,255,255,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      color: #FFFFFF;
+    }
+    .biz-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #F3F4F6;
+      margin: 0;
+    }
+    .app-brand {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+    .app-book-icon {
+      display: inline-block;
+      width: 15px;
+      height: 18px;
+      background-color: #FFFFFF;
+      border-radius: 2px;
+      border-left: 3px solid #93C5FD;
+    }
+    .content-area {
+      padding: 22px 28px 28px 28px;
+      flex: 1;
+    }
+    .statement-heading {
+      text-align: center;
+      margin-bottom: 18px;
+    }
+    .statement-heading h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 6px 0;
+    }
+    .statement-heading p {
+      font-size: 13px;
+      color: #4B5563;
+      margin: 0;
+      font-weight: 500;
+    }
+    .summary-card {
+      border: 1px solid #D1D5DB;
+      border-radius: 4px;
+      padding: 16px 22px;
+      margin-bottom: 22px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      background-color: #FFFFFF;
+    }
+    .sum-col {
+      flex: 1;
+    }
+    .sum-op {
+      font-size: 18px;
+      font-weight: 700;
+      color: #6B7280;
+      padding: 16px 18px 0 18px;
+    }
+    .sum-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    .sum-main-val {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .sum-sub-line {
+      font-size: 11px;
+      color: #4B5563;
+      margin-top: 3px;
+      font-weight: 500;
+    }
+    table.statement-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      border: 1px solid #6B7280;
+    }
+    table.statement-table th {
+      background-color: #F3F4F6;
+      color: #111827;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 10px 10px;
+      border-top: 1px solid #6B7280;
+      border-bottom: 1px solid #6B7280;
+      text-align: right;
+    }
+    table.statement-table th:first-child {
+      text-align: left;
+    }
+    table.statement-table td {
+      padding: 9px 10px;
+      border: 1px solid #6B7280;
+      vertical-align: middle;
+    }
+    .col-date {
+      width: 24%;
+      background-color: #E5E7EB;
+    }
+    .col-in {
+      width: 19%;
+      text-align: right;
+      background-color: #C7D2CC;
+      font-weight: 700;
+      color: #111827;
+    }
+    .col-out {
+      width: 19%;
+      text-align: right;
+      background-color: #E6E1D6;
+      font-weight: 700;
+      color: #111827;
+    }
+    .col-daily-bal {
+      width: 19%;
+      text-align: right;
+      background-color: #E6E1D6;
+      font-weight: 700;
+    }
+    .col-total-bal {
+      width: 19%;
+      text-align: right;
+      background-color: #E6E1D6;
+      font-weight: 700;
+    }
+    /* Single-date summary row */
+    .date-summary-row td {
+      background-color: #DCE3DF;
+      font-weight: 700;
+    }
+    .date-summary-row td.col-out,
+    .date-summary-row td.col-daily-bal,
+    .date-summary-row td.col-total-bal {
+      background-color: #ECE8DF;
+    }
+    /* Multi-date distinct highlighted header row */
+    .date-summary-multi td {
+      background-color: #DBEAFE !important;
+      border-top: 2.5px solid #1D4273 !important;
+      border-bottom: 1.5px solid #2563EB !important;
+      font-weight: 700;
+      padding-top: 11px;
+      padding-bottom: 11px;
+    }
+    .date-summary-multi td.col-date {
+      background-color: #BFDBFE !important;
+      border-left: 4px solid #1D4273 !important;
+    }
+    .date-summary-multi td.col-in {
+      background-color: #D1FAE5 !important;
+    }
+    .customer-date-group-row td {
+      background-color: #DBEAFE !important;
+      border-top: 2px solid #1D4273 !important;
+      border-bottom: 1.5px solid #2563EB !important;
+      border-left: 4px solid #1D4273 !important;
+      color: #1E3A8A;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 8px 10px;
+    }
+    .primary-cell-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 3px;
+    }
+    .secondary-cell-note {
+      font-size: 10.5px;
+      color: #4B5563;
+      font-weight: 500;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+    .grand-total-row td {
+      background-color: #CBD5E1 !important;
+      border-top: 2px solid #1F2937 !important;
+      font-weight: 700;
+      font-size: 12.5px;
+      color: #111827;
+      padding: 11px 10px;
+    }
+    .bottom-banner {
+      background-color: #1D4273;
+      color: #FFFFFF;
+      padding: 12px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      margin-top: auto;
+    }
+    .bottom-badge {
+      background-color: #E5E7EB;
+      color: #111827;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 3px;
+      margin-left: 8px;
+      font-size: 10.5px;
+    }
+  `;
+}
+
 /**
- * Generates an HTML template for the Cashbook Daily Report PDF.
+ * Generates an HTML template for the Cashbook Statement PDF matching the Khatabook statement layout.
  */
 function buildCashbookReportHtml(params: CashbookPdfReportParams): string {
   const {
@@ -42,36 +338,147 @@ function buildCashbookReportHtml(params: CashbookPdfReportParams): string {
     totalOut,
     netBalance,
     rows,
+    entries = [],
   } = params;
 
-  const netColor = netBalance >= 0 ? "#16A34A" : "#DC2626";
-  const generatedAt = new Date().toLocaleString();
+  const initials = getBusinessInitials(businessName);
+  const startDisplay = formatFullDateDisplay(startDate);
+  const endDisplay = formatFullDateDisplay(endDate);
+
+  // Calculate Cash vs Online breakdown if detailed entries are available
+  let cashIn = 0;
+  let onlineIn = 0;
+  let cashOut = 0;
+  let onlineOut = 0;
+
+  if (entries.length > 0) {
+    for (const e of entries) {
+      if (e.type === "IN") {
+        if (e.payment_mode === "ONLINE") onlineIn += e.amount;
+        else cashIn += e.amount;
+      } else {
+        if (e.payment_mode === "ONLINE") onlineOut += e.amount;
+        else cashOut += e.amount;
+      }
+    }
+  } else {
+    cashIn = totalIn;
+    cashOut = totalOut;
+  }
+
+// Group individual entries by entry_date (sorted oldest-to-newest time within each date)
+  const sortedEntriesAsc = [...entries].sort(
+    (a, b) =>
+      a.entry_date.localeCompare(b.entry_date) ||
+      (a.timestamp || 0) - (b.timestamp || 0),
+  );
+  const entriesByDate = new Map<string, CashbookEntryRow[]>();
+  for (const e of sortedEntriesAsc) {
+    const list = entriesByDate.get(e.entry_date) ?? [];
+    list.push(e);
+    entriesByDate.set(e.entry_date, list);
+  }
+
+  // Chronological oldest-to-newest (1 -> 15)
+  const sortedAsc = [...rows].sort((a, b) =>
+    a.entry_date.localeCompare(b.entry_date),
+  );
+  const firstDay = sortedAsc[0];
+  const lastDay = sortedAsc[sortedAsc.length - 1];
+  const openingBalance = firstDay
+    ? firstDay.total_balance - firstDay.daily_balance
+    : 0;
+  const closingBalance = lastDay ? lastDay.total_balance : netBalance;
+
+const netColor = netBalance >= 0 ? "#0D9488" : "#DC2626";
+  const netSuffix = netBalance < 0 ? " Dr" : netBalance > 0 ? " Cr" : "";
+  const isMultiDate = sortedAsc.length > 1;
 
   const tableRowsHtml =
-    rows.length === 0
-      ? `<tr><td colspan="4" style="text-align: center; padding: 24px; color: #6B7280;">No entries found in this date range.</td></tr>`
-      : rows
+    sortedAsc.length === 0
+      ? `<tr><td colspan="5" style="text-align: center; padding: 24px; color: #6B7280; background-color: #FFFFFF;">No entries found in this date range.</td></tr>`
+      : sortedAsc
           .map((row) => {
-            const balColor = row.total_balance >= 0 ? "#16A34A" : "#DC2626";
-            return `
-              <tr>
-                <td>
-                  <div style="font-weight: 600; color: #111827;">${escapeHtml(row.entry_date)}</div>
-                  <div style="font-size: 11px; color: #6B7280;">${row.entry_count} ${row.entry_count === 1 ? "Entry" : "Entries"}</div>
+            const dailyBalColor =
+              row.daily_balance < 0 ? "#EA580C" : "#0D9488";
+            const totalBalColor =
+              row.total_balance < 0 ? "#EA580C" : "#0D9488";
+            const dailySign = row.daily_balance < 0 ? "- " : "";
+            const totalSign = row.total_balance < 0 ? "- " : "";
+            const dayEntries = entriesByDate.get(row.entry_date) ?? [];
+            const rowClass = isMultiDate
+              ? "date-summary-row date-summary-multi"
+              : "date-summary-row";
+
+            const dayHeaderHtml = `
+              <tr class="${rowClass}">
+                <td class="col-date">
+                  <div class="primary-cell-title" style="color: ${isMultiDate ? "#1E3A8A" : "#111827"}; font-size: ${isMultiDate ? "13px" : "12px"};">
+                    ${escapeHtml(formatShortDateDisplay(row.entry_date))}
+                  </div>
+                  <div class="secondary-cell-note" style="color: ${isMultiDate ? "#1E40AF" : "#4B5563"}; font-weight: 600;">
+                    ${row.entry_count} ${row.entry_count === 1 ? "Entry" : "Entries"}
+                  </div>
                 </td>
-                <td style="text-align: right; color: #16A34A; font-weight: 600;">
-                  ${formatCurrency(row.daily_in, currency, false)}
+                <td class="col-in">
+                  ${formatCurrency(row.daily_in, currency, true)}
                 </td>
-                <td style="text-align: right; color: #DC2626; font-weight: 600; background-color: #FFF1F2;">
-                  ${formatCurrency(row.daily_out, currency, false)}
+                <td class="col-out">
+                  ${formatCurrency(row.daily_out, currency, true)}
                 </td>
-                <td style="text-align: right; color: ${balColor}; font-weight: 700;">
-                  ${formatCurrency(row.total_balance, currency, true)}
+                <td class="col-daily-bal" style="color: ${dailyBalColor};">
+                  ${dailySign}${formatCurrency(Math.abs(row.daily_balance), currency, true)}
+                </td>
+                <td class="col-total-bal" style="color: ${totalBalColor};">
+                  ${totalSign}${formatCurrency(Math.abs(row.total_balance), currency, true)}
                 </td>
               </tr>
             `;
+
+            const entryRowsHtml = dayEntries
+              .map((entry) => {
+                const noteText =
+                  entry.details && entry.details.trim().length > 0
+                    ? escapeHtml(entry.details.trim())
+                    : entry.payment_mode === "ONLINE"
+                      ? "Online entry"
+                      : "Cash entry";
+                return `
+                  <tr>
+                    <td class="col-date">
+                      <div class="primary-cell-title">${escapeHtml(entry.entry_time || "")}</div>
+                      <div class="secondary-cell-note">${noteText}</div>
+                    </td>
+                    <td class="col-in">
+                      ${entry.type === "IN" ? formatCurrency(entry.amount, currency, true) : ""}
+                    </td>
+                    <td class="col-out">
+                      ${entry.type === "OUT" ? formatCurrency(entry.amount, currency, true) : ""}
+                    </td>
+                    <td class="col-daily-bal"></td>
+                    <td class="col-total-bal"></td>
+                  </tr>
+                `;
+              })
+              .join("");
+
+            return dayHeaderHtml + entryRowsHtml;
           })
           .join("");
+
+  const closingSign = closingBalance < 0 ? "- " : "";
+  const grandTotalHtml =
+    sortedAsc.length > 0
+      ? `
+        <tr class="grand-total-row">
+          <td>Grand Total</td>
+          <td style="text-align: right;">${formatCurrency(totalIn, currency, true)}</td>
+          <td style="text-align: right;">${formatCurrency(totalOut, currency, true)}</td>
+          <td></td>
+          <td style="text-align: right;">${closingSign}${formatCurrency(Math.abs(closingBalance), currency, true)}</td>
+        </tr>
+      `
+      : "";
 
   return `
     <!DOCTYPE html>
@@ -79,164 +486,112 @@ function buildCashbookReportHtml(params: CashbookPdfReportParams): string {
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            color: #1F2937;
-            margin: 0;
-            padding: 24px;
-          }
-          .header {
-            border-bottom: 2px solid #1E40AF;
-            padding-bottom: 12px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-          }
-          .biz-name {
-            font-size: 22px;
-            font-weight: 700;
-            color: #1E40AF;
-            margin: 0 0 4px 0;
-          }
-          .report-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #4B5563;
-            margin: 0;
-          }
-          .date-range {
-            text-align: right;
-            font-size: 12px;
-            color: #374151;
-          }
-          .summary-box {
-            display: flex;
-            border: 1px solid #E5E7EB;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            background-color: #F9FAFB;
-            overflow: hidden;
-          }
-          .summary-item {
-            flex: 1;
-            padding: 12px;
-            text-align: center;
-            border-right: 1px solid #E5E7EB;
-          }
-          .summary-item:last-child {
-            border-right: none;
-          }
-          .summary-label {
-            font-size: 11px;
-            color: #6B7280;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-            font-weight: 600;
-          }
-          .summary-val {
-            font-size: 16px;
-            font-weight: 700;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-          }
-          th {
-            background-color: #F3F4F6;
-            color: #4B5563;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            padding: 10px 8px;
-            border-bottom: 1px solid #D1D5DB;
-            text-align: right;
-          }
-          th:first-child {
-            text-align: left;
-          }
-          td {
-            padding: 10px 8px;
-            border-bottom: 1px solid #E5E7EB;
-          }
-          .footer {
-            margin-top: 28px;
-            text-align: center;
-            font-size: 11px;
-            color: #9CA3AF;
-            border-top: 1px solid #E5E7EB;
-            padding-top: 12px;
-          }
-        </style>
+        <style>${getSharedStatementStyles()}</style>
       </head>
       <body>
-        <div class="header">
-          <div>
-            <h1 class="biz-name">${escapeHtml(businessName)}</h1>
-            <p class="report-title">Cashbook Daily Report</p>
+        <div class="page-wrap">
+          <div class="top-banner">
+            <div class="biz-brand">
+              <div class="biz-avatar">${escapeHtml(initials)}</div>
+              <p class="biz-title">${escapeHtml(businessName)}</p>
+            </div>
+            <div class="app-brand">
+              <span class="app-book-icon"></span>
+              <span>HisabKhata</span>
+            </div>
           </div>
-          <div class="date-range">
-            <div><strong>Period:</strong> ${escapeHtml(startDate)} to ${escapeHtml(endDate)}</div>
-            <div style="color: #6B7280; margin-top: 2px;">Generated: ${escapeHtml(generatedAt)}</div>
-          </div>
-        </div>
 
-        <div class="summary-box">
-          <div class="summary-item">
-            <div class="summary-label">Total IN</div>
-            <div class="summary-val" style="color: #16A34A;">${formatCurrency(totalIn, currency, true)}</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Total OUT</div>
-            <div class="summary-val" style="color: #DC2626;">${formatCurrency(totalOut, currency, true)}</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Net Balance</div>
-            <div class="summary-val" style="color: ${netColor};">${formatCurrency(netBalance, currency, true)}</div>
-          </div>
-        </div>
+          <div class="content-area">
+            <div class="statement-heading">
+              <h2>Cashbook Statement</h2>
+              <p>${escapeHtml(startDisplay)} - ${escapeHtml(endDisplay)} (Date Range)</p>
+            </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Daily IN</th>
-              <th>Daily OUT</th>
-              <th>Total Bal.</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${tableRowsHtml}
-          </tbody>
-        </table>
+            <div class="summary-card">
+              <div class="sum-col">
+                <div class="sum-label">Total IN (+)</div>
+                <div class="sum-main-val" style="color: #0D9488;">
+                  ${formatCurrency(totalIn, currency, true)}
+                </div>
+                <div class="sum-sub-line">Cash : ${formatCurrency(cashIn, currency, true)}</div>
+                <div class="sum-sub-line">Online : ${formatCurrency(onlineIn, currency, true)}</div>
+              </div>
 
-        <div class="footer">
-          Generated by HisabKhata App
+              <div class="sum-op">-</div>
+
+              <div class="sum-col">
+                <div class="sum-label">Total OUT (-)</div>
+                <div class="sum-main-val" style="color: #EA580C;">
+                  ${formatCurrency(totalOut, currency, true)}
+                </div>
+                <div class="sum-sub-line">Cash : ${formatCurrency(cashOut, currency, true)}</div>
+                <div class="sum-sub-line">Online : ${formatCurrency(onlineOut, currency, true)}</div>
+              </div>
+
+              <div class="sum-op">=</div>
+
+              <div class="sum-col">
+                <div class="sum-label">Net Balance</div>
+                <div class="sum-main-val" style="color: ${netColor};">
+                  ${formatCurrency(Math.abs(netBalance), currency, true)}${netSuffix}
+                </div>
+                <div class="sum-sub-line">
+                  Opening balance (${escapeHtml(formatShortDateDisplay(startDate))}) :
+                  <span style="color: ${openingBalance < 0 ? "#EA580C" : "#0D9488"}; font-weight: 700;">
+                    ${openingBalance < 0 ? "- " : ""}${formatCurrency(Math.abs(openingBalance), currency, true)}
+                  </span>
+                </div>
+                <div class="sum-sub-line">
+                  Closing balance (${escapeHtml(formatShortDateDisplay(endDate))}) :
+                  <span style="color: ${closingBalance < 0 ? "#EA580C" : "#0D9488"}; font-weight: 700;">
+                    ${closingSign}${formatCurrency(Math.abs(closingBalance), currency, true)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <table class="statement-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Total IN</th>
+                  <th>Total OUT</th>
+                  <th>Daily Balance</th>
+                  <th>Total Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableRowsHtml}
+                ${grandTotalHtml}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bottom-banner">
+            <div>
+              <span>Start Using HisabKhata Now</span>
+              <span class="bottom-badge">HisabKhata</span>
+            </div>
+            <div style="text-align: right;">
+              <div>100% Safe &amp; Automatic Cloud Backup</div>
+            </div>
+          </div>
         </div>
       </body>
     </html>
   `;
 }
 
-/**
- * Generates a PDF file for the Cashbook Report and opens the native share sheet
- * (allowing WhatsApp send, Drive upload, or saving locally via Share/Print).
- */
 export async function generateAndShareCashbookPdf(
   params: CashbookPdfReportParams,
 ): Promise<void> {
   const html = buildCashbookReportHtml(params);
 
-  // 1. Generate PDF and get base64 content directly in memory
-  // This bypasses Expo Go's file read restriction on global cache/Print directory
   const { uri, base64 } = await Print.printToFileAsync({
     html,
     base64: true,
   });
 
-  // 2. Write the base64 PDF directly into the app's own allowed directory with a clean filename
   const safeStart = params.startDate.replace(/[^a-zA-Z0-9_-]/g, "_");
   const safeEnd = params.endDate.replace(/[^a-zA-Z0-9_-]/g, "_");
   const fileName = `Cashbook_Report_${safeStart}_to_${safeEnd}.pdf`;
@@ -251,7 +606,6 @@ export async function generateAndShareCashbookPdf(
     });
   }
 
-  // 3. Trigger native share sheet (WhatsApp, Telegram, Save to Device, etc.)
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {
     await Sharing.shareAsync(targetUri, {
@@ -260,14 +614,10 @@ export async function generateAndShareCashbookPdf(
       UTI: "com.adobe.pdf",
     });
   } else {
-    // Fallback to native print/save dialog if sharing is unavailable
     await Print.printAsync({ html });
   }
 }
 
-/**
- * Opens the native system print/save-as-PDF preview dialog directly.
- */
 export async function printOrSaveCashbookPdf(
   params: CashbookPdfReportParams,
 ): Promise<void> {
@@ -277,7 +627,7 @@ export async function printOrSaveCashbookPdf(
 
 export interface CustomerPdfReportParams {
   businessName: string;
-  reportTitle: string; // e.g., "Saad - Ledger Statement" or "All Customers Report"
+  reportTitle: string;
   currency: CurrencyCode;
   startDate: string;
   endDate: string;
@@ -289,7 +639,7 @@ export interface CustomerPdfReportParams {
 }
 
 /**
- * Generates HTML markup for Customer Ledger / All Customers PDF Report.
+ * Generates HTML markup for Customer Ledger / All Customers PDF Report in the same Khatabook statement style.
  */
 function buildCustomerReportHtml(params: CustomerPdfReportParams): string {
   const {
@@ -305,116 +655,186 @@ function buildCustomerReportHtml(params: CustomerPdfReportParams): string {
     showCustomerName,
   } = params;
 
+  const initials = getBusinessInitials(businessName);
+  const startDisplay = formatFullDateDisplay(startDate);
+  const endDisplay = formatFullDateDisplay(endDate);
+
   const netColor =
-    netBalance < 0 ? "#DC2626" : netBalance > 0 ? "#16A34A" : "#374151";
+    netBalance < 0 ? "#EA580C" : netBalance > 0 ? "#0D9488" : "#374151";
   const netLabel =
     netBalance < 0
-      ? "You will get"
+      ? "You will get (Dr)"
       : netBalance > 0
-        ? "You will give"
+        ? "You will give (Cr)"
         : "Settled";
-  const generatedAt = new Date().toLocaleString();
+
+  const gaveCount = rows.filter((r) => r.type === "GAVE").length;
+  const gotCount = rows.filter((r) => r.type === "GOT").length;
+
+  // Sort oldest-to-newest (1 -> 15) for statement reading
+  const sortedCustomerRowsAsc = [...rows].sort((a, b) =>
+    a.entry_date.localeCompare(b.entry_date),
+  );
+  const uniqueDates = new Set(sortedCustomerRowsAsc.map((r) => r.entry_date));
+  const isMultiDate = uniqueDates.size > 1;
 
   const tableRowsHtml =
-    rows.length === 0
-      ? `<tr><td colspan="4" style="text-align: center; padding: 24px; color: #6B7280;">No transactions found in this date range.</td></tr>`
-      : rows
-          .map((row) => {
-            const balColor = row.running_balance < 0 ? "#DC2626" : "#16A34A";
-            return `
+    sortedCustomerRowsAsc.length === 0
+      ? `<tr><td colspan="4" style="text-align: center; padding: 24px; color: #6B7280; background-color: #FFFFFF;">No transactions found in this date range.</td></tr>`
+      : sortedCustomerRowsAsc
+          .map((row, idx) => {
+            const isNewDateGroup =
+              isMultiDate &&
+              (idx === 0 ||
+                sortedCustomerRowsAsc[idx - 1].entry_date !== row.entry_date);
+
+            const dateGroupBanner = isNewDateGroup
+              ? `
+                <tr class="customer-date-group-row">
+                  <td colspan="4">${escapeHtml(formatFullDateDisplay(row.entry_date))}</td>
+                </tr>
+              `
+              : "";
+
+            const balColor = row.running_balance < 0 ? "#EA580C" : "#0D9488";
+            const balSign = row.running_balance < 0 ? "- " : "";
+            const noteParts: string[] = [];
+            if (showCustomerName && row.customer_name) {
+              noteParts.push(escapeHtml(row.customer_name));
+            }
+            if (row.details && row.details.trim().length > 0) {
+              noteParts.push(escapeHtml(row.details.trim()));
+            }
+            const noteHtml =
+              noteParts.length > 0
+                ? noteParts.join(" • ")
+                : row.type === "GAVE"
+                  ? "Credit given"
+                  : "Payment received";
+
+            return (
+              dateGroupBanner +
+              `
               <tr>
-                <td>
-                  <div style="font-weight: 600; color: #111827;">${escapeHtml(row.entry_date)} • ${escapeHtml(row.entry_time)}</div>
-                  ${showCustomerName ? `<div style="font-size: 12px; font-weight: 600; color: #1E40AF;">${escapeHtml(row.customer_name)}</div>` : ""}
-                  ${row.details ? `<div style="font-size: 11px; color: #6B7280;">${escapeHtml(row.details)}</div>` : ""}
+                <td class="col-date" style="width: 34%;">
+                  <div class="primary-cell-title">${escapeHtml(formatShortDateDisplay(row.entry_date))} • ${escapeHtml(row.entry_time || "")}</div>
+                  <div class="secondary-cell-note">${noteHtml}</div>
                 </td>
-                <td style="text-align: right; color: #DC2626; font-weight: 600; background-color: #FFF1F2;">
-                  ${row.type === "GAVE" ? formatCurrency(row.amount, currency, false) : "—"}
+                <td class="col-out" style="width: 22%;">
+                  ${row.type === "GAVE" ? formatCurrency(row.amount, currency, true) : ""}
                 </td>
-                <td style="text-align: right; color: #16A34A; font-weight: 600;">
-                  ${row.type === "GOT" ? formatCurrency(row.amount, currency, false) : "—"}
+                <td class="col-in" style="width: 22%;">
+                  ${row.type === "GOT" ? formatCurrency(row.amount, currency, true) : ""}
                 </td>
-                <td style="text-align: right; color: ${balColor}; font-weight: 700;">
-                  ${formatCurrency(Math.abs(row.running_balance), currency, true)}
+                <td class="col-total-bal" style="width: 22%; color: ${balColor};">
+                  ${balSign}${formatCurrency(Math.abs(row.running_balance), currency, true)}
                 </td>
               </tr>
-            `;
+            `
+            );
           })
           .join("");
+
+  const grandTotalHtml =
+    sortedCustomerRowsAsc.length > 0
+      ? `
+        <tr class="grand-total-row">
+          <td>Grand Total (${sortedCustomerRowsAsc.length} Entries)</td>
+          <td style="text-align: right;">${formatCurrency(totalGave, currency, true)}</td>
+          <td style="text-align: right;">${formatCurrency(totalGot, currency, true)}</td>
+          <td style="text-align: right; color: ${netColor};">${netBalance < 0 ? "- " : ""}${formatCurrency(Math.abs(netBalance), currency, true)}</td>
+        </tr>
+      `
+      : "";
 
   return `
     <!DOCTYPE html>
     <html>
       <head>
         <meta charset="utf-8" />
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1F2937; margin: 0; padding: 24px; }
-          .header { border-bottom: 2px solid #1E40AF; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
-          .biz-name { font-size: 22px; font-weight: 700; color: #1E40AF; margin: 0 0 4px 0; }
-          .report-title { font-size: 14px; font-weight: 600; color: #4B5563; margin: 0; }
-          .date-range { text-align: right; font-size: 12px; color: #374151; }
-          .summary-box { display: flex; border: 1px solid #E5E7EB; border-radius: 8px; margin-bottom: 20px; background-color: #F9FAFB; overflow: hidden; }
-          .summary-item { flex: 1; padding: 12px; text-align: center; border-right: 1px solid #E5E7EB; }
-          .summary-item:last-child { border-right: none; }
-          .summary-label { font-size: 11px; color: #6B7280; text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
-          .summary-val { font-size: 16px; font-weight: 700; }
-          table { width: 100%; border-collapse: collapse; font-size: 13px; }
-          th { background-color: #F3F4F6; color: #4B5563; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 10px 8px; border-bottom: 1px solid #D1D5DB; text-align: right; }
-          th:first-child { text-align: left; }
-          td { padding: 10px 8px; border-bottom: 1px solid #E5E7EB; }
-          .footer { margin-top: 28px; text-align: center; font-size: 11px; color: #9CA3AF; border-top: 1px solid #E5E7EB; padding-top: 12px; }
-        </style>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <style>${getSharedStatementStyles()}</style>
       </head>
       <body>
-        <div class="header">
-          <div>
-            <h1 class="biz-name">${escapeHtml(businessName)}</h1>
-            <p class="report-title">${escapeHtml(reportTitle)}</p>
+        <div class="page-wrap">
+          <div class="top-banner">
+            <div class="biz-brand">
+              <div class="biz-avatar">${escapeHtml(initials)}</div>
+              <p class="biz-title">${escapeHtml(businessName)}</p>
+            </div>
+            <div class="app-brand">
+              <span class="app-book-icon"></span>
+              <span>HisabKhata</span>
+            </div>
           </div>
-          <div class="date-range">
-            <div><strong>Period:</strong> ${escapeHtml(startDate)} to ${escapeHtml(endDate)}</div>
-            <div style="color: #6B7280; margin-top: 2px;">Generated: ${escapeHtml(generatedAt)}</div>
+
+          <div class="content-area">
+            <div class="statement-heading">
+              <h2>${escapeHtml(reportTitle)}</h2>
+              <p>${escapeHtml(startDisplay)} - ${escapeHtml(endDisplay)} (Date Range)</p>
+            </div>
+
+            <div class="summary-card">
+              <div class="sum-col">
+                <div class="sum-label">Total You Gave (-)</div>
+                <div class="sum-main-val" style="color: #EA580C;">
+                  ${formatCurrency(totalGave, currency, true)}
+                </div>
+                <div class="sum-sub-line">Entries : ${gaveCount}</div>
+              </div>
+
+              <div class="sum-op">-</div>
+
+              <div class="sum-col">
+                <div class="sum-label">Total You Got (+)</div>
+                <div class="sum-main-val" style="color: #0D9488;">
+                  ${formatCurrency(totalGot, currency, true)}
+                </div>
+                <div class="sum-sub-line">Entries : ${gotCount}</div>
+              </div>
+
+              <div class="sum-op">=</div>
+
+              <div class="sum-col">
+                <div class="sum-label">Net Balance</div>
+                <div class="sum-main-val" style="color: ${netColor};">
+                  ${netBalance < 0 ? "- " : ""}${formatCurrency(Math.abs(netBalance), currency, true)}
+                </div>
+                <div class="sum-sub-line">Status : <strong>${netLabel}</strong></div>
+              </div>
+            </div>
+
+            <table class="statement-table">
+              <thead>
+                <tr>
+                  <th>Date &amp; Details</th>
+                  <th>You Gave</th>
+                  <th>You Got</th>
+                  <th>Running Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableRowsHtml}
+                ${grandTotalHtml}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bottom-banner">
+            <div>
+              <span>Start Using HisabKhata Now</span>
+              <span class="bottom-badge">HisabKhata</span>
+            </div>
+            <div style="text-align: right;">
+              <div>100% Safe &amp; Automatic Cloud Backup</div>
+            </div>
           </div>
         </div>
-
-        <div class="summary-box">
-          <div class="summary-item">
-            <div class="summary-label">Total You Gave</div>
-            <div class="summary-val" style="color: #DC2626;">${formatCurrency(totalGave, currency, true)}</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Total You Got</div>
-            <div class="summary-val" style="color: #16A34A;">${formatCurrency(totalGot, currency, true)}</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-label">Net (${netLabel})</div>
-            <div class="summary-val" style="color: ${netColor};">${formatCurrency(Math.abs(netBalance), currency, true)}</div>
-          </div>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Date & Details</th>
-              <th>You Gave</th>
-              <th>You Got</th>
-              <th>Running Bal.</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${tableRowsHtml}
-          </tbody>
-        </table>
-
-        <div class="footer">Generated by HisabKhata App</div>
       </body>
     </html>
   `;
 }
 
-/**
- * Generates and shares Customer Ledger PDF via WhatsApp or native share sheet.
- */
 export async function generateAndShareCustomerPdf(
   params: CustomerPdfReportParams,
 ): Promise<void> {
@@ -452,9 +872,6 @@ export async function generateAndShareCustomerPdf(
   }
 }
 
-/**
- * Opens native system print/save-as-PDF preview dialog for Customer Report.
- */
 export async function printOrSaveCustomerPdf(
   params: CustomerPdfReportParams,
 ): Promise<void> {
