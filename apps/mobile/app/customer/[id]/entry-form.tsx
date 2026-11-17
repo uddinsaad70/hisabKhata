@@ -74,18 +74,47 @@ export default function CustomerEntryFormScreen() {
     number | null
   >(null);
 
-// Regex to match any existing calculation like "(100+100 = 200)" or "100+100 = 200"
+// Match existing calculation "(expr = result)" or unparenthesized "expr = result"
   const CALC_EQUATION_REGEX =
-    /\s*(?:\([0-9.\s+\-×÷%]+=[^)]+\)|[0-9.]+(?:\s*[+\-×÷%]\s*[0-9.]+)+\s*=\s*[0-9.]+)/g;
+    /\s*(?:\(([^()=]+)=\s*([0-9.]+)\)|([0-9.]+(?:\s*[+\-×÷%]\s*[0-9.]+)+)\s*=\s*([0-9.]+))/;
 
   const upsertCalculationInDetails = (
     prevDetails: string,
-    equation: string,
+    newExpr: string,
+    newResult: string,
   ): string => {
-    const withoutOldCalc = prevDetails.replace(CALC_EQUATION_REGEX, "").trim();
+    let mergedExpr = newExpr.trim();
+    const existingMatch = prevDetails.match(CALC_EQUATION_REGEX);
+
+    if (existingMatch) {
+      const oldExpr = (existingMatch[1] || existingMatch[3] || "").trim();
+      const oldResult = (existingMatch[2] || existingMatch[4] || "").trim();
+
+      // Chain previous expression if new calculation starts with old result (e.g. 100 + 100 = 200 then 200 + 100 -> 100 + 100 + 100)
+      if (oldExpr && oldResult) {
+        const oldNum = parseFloat(oldResult);
+        const leadingMatch = mergedExpr.match(/^([0-9.]+)(?=\s*[+\-×÷%])/);
+        if (
+          leadingMatch &&
+          !isNaN(oldNum) &&
+          parseFloat(leadingMatch[1]) === oldNum
+        ) {
+          mergedExpr =
+            oldExpr + mergedExpr.slice(leadingMatch[1].length);
+        }
+      }
+    }
+
+    const formattedExpr = mergedExpr
+      .replace(/\s*([+\-×÷%])\s*/g, " $1 ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const equation = `(${formattedExpr} = ${newResult})`;
+    const withoutOldCalc = prevDetails
+      .replace(new RegExp(CALC_EQUATION_REGEX.source, "g"), "")
+      .trim();
     return withoutOldCalc ? `${withoutOldCalc} ${equation}` : equation;
   };
-
   // Strip no-op zero additions/subtractions like "+0", "-000", "000+"
   const sanitizeZeroOperations = (expr: string): string => {
     let cleaned = expr.trim();
@@ -105,8 +134,9 @@ const handleEvaluate = () => {
 
       // Only update details if meaningful math operators remain after removing +000 / -000
       if (result !== "Error" && /[\+\-\×\÷\%]/.test(meaningfulExpr)) {
-        const equation = `(${meaningfulExpr} = ${result})`;
-        setDetails((prev) => upsertCalculationInDetails(prev, equation));
+        setDetails((prev) =>
+          upsertCalculationInDetails(prev, meaningfulExpr, result),
+        );
       }
       setAmountStr(result);
       setCursorPos({ start: result.length, end: result.length });
@@ -212,8 +242,11 @@ const handleEvaluate = () => {
 
       // Only update details if meaningful math operators remain after removing +000 / -000
       if (evaluated !== "Error" && /[\+\-\×\÷\%]/.test(meaningfulExpr)) {
-        const equation = `(${meaningfulExpr} = ${evaluated})`;
-        finalDetails = upsertCalculationInDetails(finalDetails, equation);
+        finalDetails = upsertCalculationInDetails(
+          finalDetails,
+          meaningfulExpr,
+          evaluated,
+        );
         setDetails(finalDetails);
       }
 
@@ -227,7 +260,9 @@ const handleEvaluate = () => {
       // If user edited the amount directly without operators, remove stale calculation if result no longer matches
       const match = finalDetails.match(/=\s*([0-9.]+)\)?\s*$/);
       if (match && parseFloat(match[1]) !== parseFloat(finalAmountStr)) {
-        finalDetails = finalDetails.replace(CALC_EQUATION_REGEX, "").trim();
+        finalDetails = finalDetails
+          .replace(new RegExp(CALC_EQUATION_REGEX.source, "g"), "")
+          .trim();
         setDetails(finalDetails);
       }
     }
