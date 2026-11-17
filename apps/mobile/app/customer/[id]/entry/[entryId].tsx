@@ -133,20 +133,27 @@ export default function CustomerEntryDetailsScreen() {
             </Text>
           </View>
 
-          {entry.details && (
-            <View style={styles.detailRow}>
+          {entry.details ? (
+            <View style={[styles.detailRow, { alignItems: "flex-start" }]}>
               <Ionicons
                 name="document-text-outline"
                 size={20}
                 color={colors.secondaryMutedText}
+                style={{ marginTop: 2 }}
               />
               <Text
-                style={[styles.detailText, { color: colors.primaryTextDark }]}
+                style={[
+                  styles.detailText,
+                  { color: colors.primaryTextDark, lineHeight: 22 },
+                ]}
               >
-                {entry.details}
+                {entry.details.replace(
+                  /([0-9.)])\s*([+\-×÷=])\s*(?=[0-9.(])/g,
+                  "$1 $2 ",
+                )}
               </Text>
             </View>
-          )}
+          ) : null}
 
           <View style={styles.detailRow}>
             <Ionicons

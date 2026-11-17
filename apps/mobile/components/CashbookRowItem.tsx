@@ -35,7 +35,12 @@ export function CashbookRowItem({ entry, currency, onPress }: Props) {
     >
       {/* Column 1: Time, Details, Mode */}
       <View style={styles.colEntriesData}>
-        <View style={styles.timeModeRow}>
+        <View
+          style={[
+            styles.timeModeRow,
+            !entry.details?.trim() && { marginBottom: 0 },
+          ]}
+        >
           <Text style={[styles.timeText, { color: colors.secondaryMutedText }]}>
             {entry.entry_time}
           </Text>
@@ -55,12 +60,11 @@ export function CashbookRowItem({ entry, currency, onPress }: Props) {
             </Text>
           </View>
         </View>
-        {entry.details ? (
-          <Text
-            style={[styles.detailsText, { color: colors.primaryTextDark }]}
-            numberOfLines={1}
-          >
-            {entry.details}
+        {entry.details?.trim() ? (
+          <Text style={[styles.detailsText, { color: colors.primaryTextDark }]}>
+            {entry.details
+              .trim()
+              .replace(/([0-9.)])\s*([+\-×÷=])\s*(?=[0-9.(])/g, "$1 $2 ")}
           </Text>
         ) : null}
       </View>
@@ -120,6 +124,11 @@ const styles = StyleSheet.create({
   timeText: { fontFamily: "Inter_400Regular", fontSize: 11 },
   modeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   modeText: { fontFamily: "Inter_600SemiBold", fontSize: 9 },
-  detailsText: { fontFamily: "Inter_500Medium", fontSize: 13 },
+  detailsText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 2,
+  },
   amountText: { fontFamily: "Inter_700Bold", fontSize: 14 },
 });

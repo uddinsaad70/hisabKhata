@@ -486,6 +486,7 @@ const [customer, setCustomer] = useState<CustomerRow | null>(null);
                       <View
                         style={[
                           styles.runningBalancePill,
+                          !item.details?.trim() && { marginBottom: 0 },
                           showDateHeader && {
                             paddingHorizontal: 10,
                             paddingVertical: 4,
@@ -521,17 +522,21 @@ const [customer, setCustomer] = useState<CustomerRow | null>(null);
                             activeBusinessCurrency,
                           )}
                         </Text>
-                      </View>  
+                      </View>
 
-                      {item.details ? (
+                      {item.details?.trim() ? (
                         <Text
                           style={[
                             styles.entryDetails,
                             { color: colors.primaryTextDark },
                           ]}
-                          numberOfLines={1}
                         >
-                          {item.details}
+                          {item.details
+                            .trim()
+                            .replace(
+                              /([0-9.)])\s*([+\-×÷=])\s*(?=[0-9.(])/g,
+                              "$1 $2 ",
+                            )}
                         </Text>
                       ) : null}
                     </View>
@@ -801,7 +806,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   runningBalanceText: { fontFamily: "Inter_700Bold", fontSize: 12 },
-  entryDetails: { fontFamily: "Inter_500Medium", fontSize: 13 },
+  entryDetails: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 2,
+  },
   entryAmount: { fontFamily: "Inter_700Bold", fontSize: 15 },
   bottomBar: {
     position: "absolute",
