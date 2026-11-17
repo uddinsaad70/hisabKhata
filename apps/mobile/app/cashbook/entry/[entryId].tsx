@@ -2,6 +2,7 @@
 import React, { useCallback, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useUiStore } from "../../../store/uiStore";
@@ -19,6 +20,7 @@ import { getStrings } from "../../../constants/translations";
 export default function CashbookEntryDetailsScreen() {
   const { entryId } = useLocalSearchParams<{ entryId: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const themeMode = useUiStore((state) => state.themeMode);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
   const activeBusinessCurrency = useUiStore(
@@ -71,7 +73,15 @@ export default function CashbookEntryDetailsScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.pageBackgroundGrey }]}>
-      <View style={[styles.header, { backgroundColor: headerColor }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: headerColor,
+            paddingTop: Math.max(insets.top, Platform.OS === "android" ? 28 : 44) + 12,
+          },
+        ]}
+      >
         <Pressable
           onPress={() => router.back()}
           style={styles.backBtn}
@@ -185,6 +195,7 @@ export default function CashbookEntryDetailsScreen() {
           {
             backgroundColor: colors.cardSurface,
             borderTopColor: colors.borderDivider,
+            paddingBottom: 16 + insets.bottom,
           },
         ]}
       >
