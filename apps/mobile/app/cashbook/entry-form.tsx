@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { CustomCalendarModal } from "../../components/CustomCalendarModal";
 import { useUiStore } from "../../store/uiStore";
@@ -43,6 +44,7 @@ export default function CashbookEntryFormScreen() {
   }>();
   const isEditing = Boolean(entryId);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const themeMode = useUiStore((state) => state.themeMode);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
@@ -55,14 +57,42 @@ export default function CashbookEntryFormScreen() {
 
   // Form State
   const [amountStr, setAmountStr] = useState("0");
+  const [cursorPos, setCursorPos] = useState<{ start: number; end: number }>({
+    start: 1,
+    end: 1,
+  });
   const [details, setDetails] = useState("");
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("CASH");
-const [entryDate, setEntryDate] = useState<Date>(new Date());
+  const [entryDate, setEntryDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savedAmountForOverlay, setSavedAmountForOverlay] = useState<
     number | null
   >(null);
+
+// Regex to match any existing calculation like "(100+100 = 200)" or "100+100 = 200"
+  const CALC_EQUATION_REGEX =
+    /\s*(?:\([0-9.\s+\-×÷%]+=[^)]+\)|[0-9.]+(?:\s*[+\-×÷%]\s*[0-9.]+)+\s*=\s*[0-9.]+)/g;
+
+  const upsertCalculationInDetails = (
+    prevDetails: string,
+    equation: string,
+  ): string => {
+    const withoutOldCalc = prevDetails.replace(CALC_EQUATION_REGEX, "").trim();
+    return withoutOldCalc ? `${withoutOldCalc} ${equation}` : equation;
+  };
+
+  // Strip no-op zero additions/subtractions like "+0", "-000", "000+"
+  const sanitizeZeroOperations = (expr: string): string => {
+    let cleaned = expr.trim();
+    while (endsWithOperator(cleaned)) {
+      cleaned = cleaned.slice(0, -1).trim();
+    }
+    cleaned = cleaned
+      .replace(/([+\-])\s*0+(?:\.0+)?(?=$|[+\-×÷%])/g, "")
+      .replace(/^0+(?:\.0+)?\s*\+\s*/, "");
+    return cleaned || "0";
+  };
 
   // Load existing entry data when opening in Edit mode
   useEffect(() => {
@@ -75,7 +105,9 @@ const [entryDate, setEntryDate] = useState<Date>(new Date());
           entryId,
         );
         if (existingEntry) {
-          setAmountStr(existingEntry.amount.toString());
+          const str = existingEntry.amount.toString();
+          setAmountStr(str);
+          setCursorPos({ start: str.length, end: str.length });
           setDetails(existingEntry.details || "");
           setPaymentMode(existingEntry.payment_mode);
           if (existingEntry.timestamp) {
@@ -86,33 +118,76 @@ const [entryDate, setEntryDate] = useState<Date>(new Date());
     }
   }, [entryId, isEditing, activeBusinessId]);
 
-  const handleEvaluate = () => {
+const handleEvaluate = () => {
     if (/[\+\-\×\÷\%]/.test(amountStr)) {
+      const meaningfulExpr = sanitizeZeroOperations(amountStr);
       const result = evaluateExpression(amountStr);
-      if (result !== "Error") {
-        const equation = `${amountStr} = ${result}`;
-        setDetails((prev) => (prev ? `${prev}\n${equation}` : equation));
+
+      // Only update details if meaningful math operators remain after removing +000 / -000
+      if (result !== "Error" && /[\+\-\×\÷\%]/.test(meaningfulExpr)) {
+        const equation = `(${meaningfulExpr} = ${result})`;
+        setDetails((prev) => upsertCalculationInDetails(prev, equation));
       }
       setAmountStr(result);
+      setCursorPos({ start: result.length, end: result.length });
     } else {
       const result = evaluateExpression(amountStr);
       setAmountStr(result);
+      setCursorPos({ start: result.length, end: result.length });
     }
   };
 
   const handleKeyPress = (key: string) => {
-    setAmountStr((prev) => {
-      if (prev === "0" && /[0-9]/.test(key)) return key;
-      if (prev === "Error") return key;
-      return prev + key;
-    });
+    if (key === "C" || key === "AC") {
+      setAmountStr("0");
+      setCursorPos({ start: 1, end: 1 });
+      return;
+    }
+
+    if (amountStr === "Error" || (amountStr === "0" && /[0-9]/.test(key))) {
+      setAmountStr(key);
+      setCursorPos({ start: key.length, end: key.length });
+      return;
+    }
+
+    const start = Math.max(0, Math.min(cursorPos.start, amountStr.length));
+    const end = Math.max(start, Math.min(cursorPos.end, amountStr.length));
+    const nextStr = amountStr.slice(0, start) + key + amountStr.slice(end);
+    const nextCursor = start + key.length;
+
+    setAmountStr(nextStr);
+    setCursorPos({ start: nextCursor, end: nextCursor });
   };
 
   const handleDelete = () => {
-    setAmountStr((prev) => {
-      if (prev === "Error" || prev.length <= 1) return "0";
-      return prev.slice(0, -1);
-    });
+    if (amountStr === "Error" || amountStr.length <= 1) {
+      setAmountStr("0");
+      setCursorPos({ start: 1, end: 1 });
+      return;
+    }
+
+    const start = Math.max(0, Math.min(cursorPos.start, amountStr.length));
+    const end = Math.max(start, Math.min(cursorPos.end, amountStr.length));
+
+    if (start !== end) {
+      const rawNext = amountStr.slice(0, start) + amountStr.slice(end);
+      const nextStr = rawNext.length === 0 ? "0" : rawNext;
+      const nextCursor = rawNext.length === 0 ? 1 : start;
+      setAmountStr(nextStr);
+      setCursorPos({ start: nextCursor, end: nextCursor });
+      return;
+    }
+
+    if (start === 0) {
+      return;
+    }
+
+    const rawNext = amountStr.slice(0, start - 1) + amountStr.slice(start);
+    const nextStr = rawNext.length === 0 ? "0" : rawNext;
+    const nextCursor = rawNext.length === 0 ? 1 : start - 1;
+
+    setAmountStr(nextStr);
+    setCursorPos({ start: nextCursor, end: nextCursor });
   };
 
   const handleSave = async () => {
@@ -120,9 +195,35 @@ const [entryDate, setEntryDate] = useState<Date>(new Date());
     if (isSubmitting) return;
 
     let finalAmountStr = amountStr;
-    if (endsWithOperator(finalAmountStr) || /[\+\-\×\÷]/.test(finalAmountStr)) {
-      finalAmountStr = evaluateExpression(finalAmountStr);
+    let finalDetails = details.trim();
+
+    if (
+      endsWithOperator(finalAmountStr) ||
+      /[\+\-\×\÷\%]/.test(finalAmountStr)
+    ) {
+      const meaningfulExpr = sanitizeZeroOperations(finalAmountStr);
+      const evaluated = evaluateExpression(finalAmountStr);
+
+      // Only update details if meaningful math operators remain after removing +000 / -000
+      if (evaluated !== "Error" && /[\+\-\×\÷\%]/.test(meaningfulExpr)) {
+        const equation = `(${meaningfulExpr} = ${evaluated})`;
+        finalDetails = upsertCalculationInDetails(finalDetails, equation);
+        setDetails(finalDetails);
+      }
+
+      finalAmountStr = evaluated;
       setAmountStr(finalAmountStr);
+      setCursorPos({
+        start: finalAmountStr.length,
+        end: finalAmountStr.length,
+      });
+    } else {
+      // If user edited the amount directly without operators, remove stale calculation if result no longer matches
+      const match = finalDetails.match(/=\s*([0-9.]+)\)?\s*$/);
+      if (match && parseFloat(match[1]) !== parseFloat(finalAmountStr)) {
+        finalDetails = finalDetails.replace(CALC_EQUATION_REGEX, "").trim();
+        setDetails(finalDetails);
+      }
     }
 
     if (finalAmountStr === "Error") {
@@ -150,26 +251,24 @@ const [entryDate, setEntryDate] = useState<Date>(new Date());
       const db = await getDbAdapter();
 
       if (isEditing && entryId) {
-        // Update existing cashbook entry
         await updateCashbookEntry(db, {
           entryId,
           businessId: activeBusinessId,
           type: type as CashbookEntryType,
           paymentMode,
           amount: numAmount,
-          details: details.trim() || null,
+          details: finalDetails || null,
           entryDate: localDateStr,
           entryTime: getLocalTimeString(entryDate),
           timestamp: entryDate.getTime(),
         });
       } else {
-        // Create new cashbook entry
         await addCashbookEntry(db, {
           businessId: activeBusinessId,
           type: type as CashbookEntryType,
           paymentMode,
           amount: numAmount,
-          details: details.trim() || null,
+          details: finalDetails || null,
           entryDate: localDateStr,
           entryTime: getLocalTimeString(entryDate),
           timestamp: entryDate.getTime(),
@@ -178,7 +277,7 @@ const [entryDate, setEntryDate] = useState<Date>(new Date());
       setSavedAmountForOverlay(numAmount);
       setTimeout(() => {
         router.back();
-      }, animationDuration);  
+      }, animationDuration);
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to save cashbook entry.");
       setIsSubmitting(false);
@@ -190,7 +289,16 @@ const [entryDate, setEntryDate] = useState<Date>(new Date());
 
   return (
     <View style={[styles.root, { backgroundColor: colors.pageBackgroundGrey }]}>
-      <View style={[styles.header, { backgroundColor: headerColor }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: headerColor,
+            paddingTop:
+              Math.max(insets.top, Platform.OS === "android" ? 28 : 44) + 12,
+          },
+        ]}
+      >
         <Pressable
           onPress={() => router.back()}
           style={styles.backBtn}
@@ -212,16 +320,23 @@ const [entryDate, setEntryDate] = useState<Date>(new Date());
           },
         ]}
       >
-        <Text
-          numberOfLines={1}
-          adjustsFontSizeToFit
+        <TextInput
+          value={amountStr}
+          showSoftInputOnFocus={false}
+          caretHidden={false}
+          selection={cursorPos}
+          onSelectionChange={(e) => setCursorPos(e.nativeEvent.selection)}
+          selectionColor={headerColor}
           style={[
             styles.amountText,
-            { color: amountStr === "Error" ? colors.primaryRed : headerColor },
+            {
+              color: amountStr === "Error" ? colors.primaryRed : headerColor,
+              width: "100%",
+              textAlign: "right",
+              padding: 0,
+            },
           ]}
-        >
-          {amountStr}
-        </Text>
+        />
       </View>
 
       <View style={styles.detailsContainer}>
@@ -353,11 +468,18 @@ const [entryDate, setEntryDate] = useState<Date>(new Date());
         </Pressable>
       </View>
 
-<CalculatorKeypad
-        onKeyPress={handleKeyPress}
-        onDelete={handleDelete}
-        onEvaluate={handleEvaluate}
-      />
+      <View
+        style={{
+          paddingBottom: Math.max(insets.bottom, 8),
+          backgroundColor: colors.cardSurface,
+        }}
+      >
+        <CalculatorKeypad
+          onKeyPress={handleKeyPress}
+          onDelete={handleDelete}
+          onEvaluate={handleEvaluate}
+        />
+      </View>
 
       <TransactionSavedOverlay
         visible={savedAmountForOverlay !== null}

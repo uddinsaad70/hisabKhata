@@ -45,7 +45,7 @@ export default function CustomerEntryFormScreen() {
   }>();
   const isEditing = !!entryId;
   const router = useRouter();
-const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
   const themeMode = useUiStore((state) => state.themeMode);
   const activeBusinessId = useUiStore((state) => state.activeBusinessId);
   const activeBusinessCurrency = useUiStore(
@@ -62,6 +62,10 @@ const insets = useSafeAreaInsets();
 
   // Form State
   const [amountStr, setAmountStr] = useState("0");
+  const [cursorPos, setCursorPos] = useState<{ start: number; end: number }>({
+    start: 1,
+    end: 1,
+  });
   const [details, setDetails] = useState("");
   const [entryDate, setEntryDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -70,37 +74,104 @@ const insets = useSafeAreaInsets();
     number | null
   >(null);
 
-  // Evaluate the current math expression
-  const handleEvaluate = () => {
+// Regex to match any existing calculation like "(100+100 = 200)" or "100+100 = 200"
+  const CALC_EQUATION_REGEX =
+    /\s*(?:\([0-9.\s+\-×÷%]+=[^)]+\)|[0-9.]+(?:\s*[+\-×÷%]\s*[0-9.]+)+\s*=\s*[0-9.]+)/g;
+
+  const upsertCalculationInDetails = (
+    prevDetails: string,
+    equation: string,
+  ): string => {
+    const withoutOldCalc = prevDetails.replace(CALC_EQUATION_REGEX, "").trim();
+    return withoutOldCalc ? `${withoutOldCalc} ${equation}` : equation;
+  };
+
+  // Strip no-op zero additions/subtractions like "+0", "-000", "000+"
+  const sanitizeZeroOperations = (expr: string): string => {
+    let cleaned = expr.trim();
+    while (endsWithOperator(cleaned)) {
+      cleaned = cleaned.slice(0, -1).trim();
+    }
+    cleaned = cleaned
+      .replace(/([+\-])\s*0+(?:\.0+)?(?=$|[+\-×÷%])/g, "")
+      .replace(/^0+(?:\.0+)?\s*\+\s*/, "");
+    return cleaned || "0";
+  };
+
+const handleEvaluate = () => {
     if (/[\+\-\×\÷\%]/.test(amountStr)) {
+      const meaningfulExpr = sanitizeZeroOperations(amountStr);
       const result = evaluateExpression(amountStr);
-      if (result !== "Error") {
-        const equation = `${amountStr} = ${result}`;
-        setDetails((prev) => (prev ? `${prev}\n${equation}` : equation));
+
+      // Only update details if meaningful math operators remain after removing +000 / -000
+      if (result !== "Error" && /[\+\-\×\÷\%]/.test(meaningfulExpr)) {
+        const equation = `(${meaningfulExpr} = ${result})`;
+        setDetails((prev) => upsertCalculationInDetails(prev, equation));
       }
       setAmountStr(result);
+      setCursorPos({ start: result.length, end: result.length });
     } else {
       const result = evaluateExpression(amountStr);
       setAmountStr(result);
+      setCursorPos({ start: result.length, end: result.length });
     }
   };
 
-  // Append key to calculator display
+  // Insert key at current cursor position
   const handleKeyPress = (key: string) => {
-    setAmountStr((prev) => {
-      if (prev === "0" && /[0-9]/.test(key)) return key;
-      if (prev === "Error") return key;
-      return prev + key;
-    });
+    if (key === "C" || key === "AC") {
+      setAmountStr("0");
+      setCursorPos({ start: 1, end: 1 });
+      return;
+    }
+
+    if (amountStr === "Error" || (amountStr === "0" && /[0-9]/.test(key))) {
+      setAmountStr(key);
+      setCursorPos({ start: key.length, end: key.length });
+      return;
+    }
+
+    const start = Math.max(0, Math.min(cursorPos.start, amountStr.length));
+    const end = Math.max(start, Math.min(cursorPos.end, amountStr.length));
+    const nextStr = amountStr.slice(0, start) + key + amountStr.slice(end);
+    const nextCursor = start + key.length;
+
+    setAmountStr(nextStr);
+    setCursorPos({ start: nextCursor, end: nextCursor });
   };
 
-  // Delete last character
+  // Delete character before current cursor position
   const handleDelete = () => {
-    setAmountStr((prev) => {
-      if (prev === "Error" || prev.length <= 1) return "0";
-      return prev.slice(0, -1);
-    });
+    if (amountStr === "Error" || amountStr.length <= 1) {
+      setAmountStr("0");
+      setCursorPos({ start: 1, end: 1 });
+      return;
+    }
+
+    const start = Math.max(0, Math.min(cursorPos.start, amountStr.length));
+    const end = Math.max(start, Math.min(cursorPos.end, amountStr.length));
+
+    if (start !== end) {
+      const rawNext = amountStr.slice(0, start) + amountStr.slice(end);
+      const nextStr = rawNext.length === 0 ? "0" : rawNext;
+      const nextCursor = rawNext.length === 0 ? 1 : start;
+      setAmountStr(nextStr);
+      setCursorPos({ start: nextCursor, end: nextCursor });
+      return;
+    }
+
+    if (start === 0) {
+      return;
+    }
+
+    const rawNext = amountStr.slice(0, start - 1) + amountStr.slice(start);
+    const nextStr = rawNext.length === 0 ? "0" : rawNext;
+    const nextCursor = rawNext.length === 0 ? 1 : start - 1;
+
+    setAmountStr(nextStr);
+    setCursorPos({ start: nextCursor, end: nextCursor });
   };
+
   useEffect(() => {
     if (isEditing && entryId && activeBusinessId) {
       (async () => {
@@ -111,7 +182,9 @@ const insets = useSafeAreaInsets();
           entryId,
         );
         if (existingEntry) {
-          setAmountStr(existingEntry.amount.toString());
+          const str = existingEntry.amount.toString();
+          setAmountStr(str);
+          setCursorPos({ start: str.length, end: str.length });
           setDetails(existingEntry.details || "");
           if (existingEntry.timestamp) {
             setEntryDate(new Date(existingEntry.timestamp));
@@ -126,11 +199,37 @@ const insets = useSafeAreaInsets();
     if (!activeBusinessId || !id) return;
     if (isSubmitting) return;
 
-    // 1. Evaluate any pending expression before saving
+    // 1. Evaluate any pending expression and replace old calculation in details before saving
     let finalAmountStr = amountStr;
-    if (endsWithOperator(finalAmountStr) || /[\+\-\×\÷]/.test(finalAmountStr)) {
-      finalAmountStr = evaluateExpression(finalAmountStr);
+    let finalDetails = details.trim();
+
+    if (
+      endsWithOperator(finalAmountStr) ||
+      /[\+\-\×\÷\%]/.test(finalAmountStr)
+    ) {
+      const meaningfulExpr = sanitizeZeroOperations(finalAmountStr);
+      const evaluated = evaluateExpression(finalAmountStr);
+
+      // Only update details if meaningful math operators remain after removing +000 / -000
+      if (evaluated !== "Error" && /[\+\-\×\÷\%]/.test(meaningfulExpr)) {
+        const equation = `(${meaningfulExpr} = ${evaluated})`;
+        finalDetails = upsertCalculationInDetails(finalDetails, equation);
+        setDetails(finalDetails);
+      }
+
+      finalAmountStr = evaluated;
       setAmountStr(finalAmountStr);
+      setCursorPos({
+        start: finalAmountStr.length,
+        end: finalAmountStr.length,
+      });
+    } else {
+      // If user edited the amount directly without operators, remove stale calculation if result no longer matches
+      const match = finalDetails.match(/=\s*([0-9.]+)\)?\s*$/);
+      if (match && parseFloat(match[1]) !== parseFloat(finalAmountStr)) {
+        finalDetails = finalDetails.replace(CALC_EQUATION_REGEX, "").trim();
+        setDetails(finalDetails);
+      }
     }
 
     if (finalAmountStr === "Error") {
@@ -164,7 +263,7 @@ const insets = useSafeAreaInsets();
           customerId: id,
           type: type as CustomerEntryType,
           amount: numAmount,
-          details: details.trim() || null,
+          details: finalDetails || null,
           entryDate: localDateStr,
           entryTime: getLocalTimeString(entryDate),
           timestamp: entryDate.getTime(),
@@ -175,7 +274,7 @@ const insets = useSafeAreaInsets();
           customerId: id,
           type: type as CustomerEntryType,
           amount: numAmount,
-          details: details.trim() || null,
+          details: finalDetails || null,
           entryDate: localDateStr,
           entryTime: getLocalTimeString(entryDate),
           timestamp: entryDate.getTime(),
@@ -192,13 +291,6 @@ const insets = useSafeAreaInsets();
     }
   };
 
-  const onDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (selectedDate) {
-      setEntryDate(selectedDate);
-    }
-  };
-
   // If amount is greater than 0, reveal details input
   const evaluatedAmount = parseFloat(evaluateExpression(amountStr) || "0");
   const isAmountValid = !isNaN(evaluatedAmount) && evaluatedAmount > 0;
@@ -206,7 +298,16 @@ const insets = useSafeAreaInsets();
   return (
     <View style={[styles.root, { backgroundColor: colors.pageBackgroundGrey }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: headerColor }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: headerColor,
+            paddingTop:
+              Math.max(insets.top, Platform.OS === "android" ? 28 : 44) + 12,
+          },
+        ]}
+      >
         <Pressable
           onPress={() => router.back()}
           style={styles.backBtn}
@@ -221,7 +322,7 @@ const insets = useSafeAreaInsets();
         </Text>
       </View>
 
-      {/* Amount Display */}
+      {/* Amount Display with Cursor Support */}
       <View
         style={[
           styles.amountContainer,
@@ -231,16 +332,23 @@ const insets = useSafeAreaInsets();
           },
         ]}
       >
-        <Text
-          numberOfLines={1}
-          adjustsFontSizeToFit
+        <TextInput
+          value={amountStr}
+          showSoftInputOnFocus={false}
+          caretHidden={false}
+          selection={cursorPos}
+          onSelectionChange={(e) => setCursorPos(e.nativeEvent.selection)}
+          selectionColor={headerColor}
           style={[
             styles.amountText,
-            { color: amountStr === "Error" ? colors.primaryRed : headerColor },
+            {
+              color: amountStr === "Error" ? colors.primaryRed : headerColor,
+              width: "100%",
+              textAlign: "right",
+              padding: 0,
+            },
           ]}
-        >
-          {amountStr}
-        </Text>
+        />
       </View>
 
       {/* Details & Date Input (Visible when amount > 0) */}
@@ -332,20 +440,19 @@ const insets = useSafeAreaInsets();
         </Pressable>
       </View>
 
-{/* Custom Calculator Keypad */}
       {/* Custom Calculator Keypad */}
-    <View
-      style={{
-        paddingBottom: Math.max(insets.bottom, 8),
-        backgroundColor: colors.cardSurface,
-      }}
-    >
-      <CalculatorKeypad
-        onKeyPress={handleKeyPress}
-        onDelete={handleDelete}
-        onEvaluate={handleEvaluate}
-      />
-    </View>
+      <View
+        style={{
+          paddingBottom: Math.max(insets.bottom, 8),
+          backgroundColor: colors.cardSurface,
+        }}
+      >
+        <CalculatorKeypad
+          onKeyPress={handleKeyPress}
+          onDelete={handleDelete}
+          onEvaluate={handleEvaluate}
+        />
+      </View>
 
       <TransactionSavedOverlay
         visible={savedAmountForOverlay !== null}
