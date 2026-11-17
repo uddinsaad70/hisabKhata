@@ -111,7 +111,7 @@ export default function CashbookEntryFormScreen() {
       .trim();
     return withoutOldCalc ? `${withoutOldCalc} ${equation}` : equation;
   };
-  
+
   // Strip no-op zero additions/subtractions like "+0", "-000", "000+"
   const sanitizeZeroOperations = (expr: string): string => {
     let cleaned = expr.trim();
@@ -219,6 +219,52 @@ const handleEvaluate = () => {
 
     setAmountStr(nextStr);
     setCursorPos({ start: nextCursor, end: nextCursor });
+  };
+
+  // Support direct keyboard input (numbers, +, -, *, /, Backspace, =, C)
+  const handleAmountChangeText = (rawText: string) => {
+    if (rawText.includes("=")) {
+      handleEvaluate();
+      return;
+    }
+
+    if (/[cC]/.test(rawText)) {
+      setAmountStr("0");
+      setCursorPos({ start: 1, end: 1 });
+      return;
+    }
+
+    const cleanedRaw =
+      amountStr === "Error" ? rawText.replace(/Error/g, "") : rawText;
+
+    const normalized = cleanedRaw
+      .replace(/\*/g, "×")
+      .replace(/\//g, "÷")
+      .replace(/[^0-9.+\-×÷%]/g, "");
+
+    if (normalized.length === 0) {
+      setAmountStr("0");
+      setCursorPos({ start: 1, end: 1 });
+      return;
+    }
+
+    // Replace initial "0" when user types a first digit on keyboard
+    if (amountStr === "0" && normalized.length === 2) {
+      if (normalized.startsWith("0") && /[0-9]/.test(normalized[1])) {
+        const digit = normalized[1];
+        setAmountStr(digit);
+        setCursorPos({ start: 1, end: 1 });
+        return;
+      }
+      if (normalized.endsWith("0") && /[1-9]/.test(normalized[0])) {
+        const digit = normalized[0];
+        setAmountStr(digit);
+        setCursorPos({ start: 1, end: 1 });
+        return;
+      }
+    }
+
+    setAmountStr(normalized);
   };
 
   const handleSave = async () => {
@@ -358,9 +404,12 @@ const handleEvaluate = () => {
       >
         <TextInput
           value={amountStr}
+          autoFocus
           showSoftInputOnFocus={false}
           caretHidden={false}
           selection={cursorPos}
+          onChangeText={handleAmountChangeText}
+          onSubmitEditing={handleEvaluate}
           onSelectionChange={(e) => setCursorPos(e.nativeEvent.selection)}
           selectionColor={headerColor}
           style={[
