@@ -76,10 +76,10 @@ function getSharedStatementStyles(): string {
     * { box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      color: #1F2937;
+      color: #141413;
       margin: 0;
       padding: 0;
-      background-color: #FFFFFF;
+      background-color: #F9F5EB;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
@@ -89,7 +89,7 @@ function getSharedStatementStyles(): string {
       min-height: 100vh;
     }
     .top-banner {
-      background-color: #1D4273;
+      background-color: #133A2E;
       color: #FFFFFF;
       padding: 16px 28px;
       display: flex;
@@ -105,7 +105,7 @@ function getSharedStatementStyles(): string {
       width: 38px;
       height: 38px;
       border-radius: 19px;
-      background-color: #108944;
+      background-color: #C9A227;
       border: 2px solid rgba(255,255,255,0.85);
       display: flex;
       align-items: center;
@@ -117,7 +117,7 @@ function getSharedStatementStyles(): string {
     .biz-title {
       font-size: 16px;
       font-weight: 600;
-      color: #F3F4F6;
+      color: #F9F5EB;
       margin: 0;
     }
     .app-brand {
@@ -134,7 +134,7 @@ function getSharedStatementStyles(): string {
       height: 18px;
       background-color: #FFFFFF;
       border-radius: 2px;
-      border-left: 3px solid #93C5FD;
+      border-left: 3px solid #C9A227;
     }
     .content-area {
       padding: 22px 28px 28px 28px;
@@ -147,24 +147,24 @@ function getSharedStatementStyles(): string {
     .statement-heading h2 {
       font-size: 18px;
       font-weight: 700;
-      color: #111827;
+      color: #141413;
       margin: 0 0 6px 0;
     }
     .statement-heading p {
       font-size: 13px;
-      color: #4B5563;
+      color: #6B6350;
       margin: 0;
       font-weight: 500;
     }
     .summary-card {
-      border: 1px solid #D1D5DB;
+      border: 1px solid #DCD3BE;
       border-radius: 4px;
       padding: 16px 22px;
       margin-bottom: 22px;
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      background-color: #FFFFFF;
+      background-color: #F2ECDB;
     }
     .sum-col {
       flex: 1;
@@ -172,13 +172,13 @@ function getSharedStatementStyles(): string {
     .sum-op {
       font-size: 18px;
       font-weight: 700;
-      color: #6B7280;
+      color: #8A8068;
       padding: 16px 18px 0 18px;
     }
     .sum-label {
       font-size: 12px;
       font-weight: 700;
-      color: #374151;
+      color: #3D3829;
       margin-bottom: 6px;
     }
     .sum-main-val {
@@ -188,7 +188,7 @@ function getSharedStatementStyles(): string {
     }
     .sum-sub-line {
       font-size: 11px;
-      color: #4B5563;
+      color: #6B6350;
       margin-top: 3px;
       font-weight: 500;
     }
@@ -196,16 +196,16 @@ function getSharedStatementStyles(): string {
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
-      border: 1px solid #6B7280;
+      border: 1px solid #DCD3BE;
     }
     table.statement-table th {
-      background-color: #F3F4F6;
-      color: #111827;
+      background-color: #EAE0C8;
+      color: #141413;
       font-size: 11.5px;
       font-weight: 700;
       padding: 10px 10px;
-      border-top: 1px solid #6B7280;
-      border-bottom: 1px solid #6B7280;
+      border-top: 1px solid #DCD3BE;
+      border-bottom: 1.5px solid #133A2E;
       text-align: right;
     }
     table.statement-table th:first-child {
@@ -213,71 +213,71 @@ function getSharedStatementStyles(): string {
     }
     table.statement-table td {
       padding: 9px 10px;
-      border: 1px solid #6B7280;
+      border: 1px solid #DCD3BE;
       vertical-align: middle;
     }
     .col-date {
       width: 24%;
-      background-color: #E5E7EB;
+      background-color: #F9F5EB;
     }
     .col-in {
       width: 19%;
       text-align: right;
-      background-color: #C7D2CC;
+      background-color: #F1F5E9;
       font-weight: 700;
-      color: #111827;
+      color: #166534;
     }
     .col-out {
       width: 19%;
       text-align: right;
-      background-color: #E6E1D6;
+      background-color: #FBF0E6;
       font-weight: 700;
-      color: #111827;
+      color: #9A3412;
     }
     .col-daily-bal {
       width: 19%;
       text-align: right;
-      background-color: #E6E1D6;
+      background-color: #F9F5EB;
       font-weight: 700;
     }
     .col-total-bal {
       width: 19%;
       text-align: right;
-      background-color: #E6E1D6;
+      background-color: #F9F5EB;
       font-weight: 700;
     }
     /* Single-date summary row */
     .date-summary-row td {
-      background-color: #DCE3DF;
+      background-color: #EAE0C8;
       font-weight: 700;
     }
     .date-summary-row td.col-out,
     .date-summary-row td.col-daily-bal,
     .date-summary-row td.col-total-bal {
-      background-color: #ECE8DF;
+      background-color: #EAE0C8;
     }
     /* Multi-date distinct highlighted header row */
     .date-summary-multi td {
-      background-color: #DBEAFE !important;
-      border-top: 2.5px solid #1D4273 !important;
-      border-bottom: 1.5px solid #2563EB !important;
+      background-color: #EAE0C8 !important;
+      border-top: 2px solid #133A2E !important;
+      border-bottom: 1px solid #DCD3BE !important;
       font-weight: 700;
       padding-top: 11px;
       padding-bottom: 11px;
     }
     .date-summary-multi td.col-date {
-      background-color: #BFDBFE !important;
-      border-left: 4px solid #1D4273 !important;
+      background-color: #EAE0C8 !important;
+      border-left: 4px solid #133A2E !important;
     }
     .date-summary-multi td.col-in {
-      background-color: #D1FAE5 !important;
+      background-color: #EAE0C8 !important;
     }
     .customer-date-group-row td {
-      background-color: #DBEAFE !important;
-      border-top: 2px solid #1D4273 !important;
-      border-bottom: 1.5px solid #2563EB !important;
-      border-left: 4px solid #1D4273 !important;
-      color: #1E3A8A;
+      background-color: #EAE0C8 !important;
+      border-top: 2px solid #133A2E !important;
+      border-bottom: 1px solid #DCD3BE !important;
+      border-left: 4px solid #133A2E !important;
+      color: #133A2E;
       font-weight: 700;
       font-size: 12px;
       padding: 8px 10px;
@@ -285,26 +285,26 @@ function getSharedStatementStyles(): string {
     .primary-cell-title {
       font-size: 12px;
       font-weight: 700;
-      color: #111827;
+      color: #141413;
       margin-bottom: 3px;
     }
     .secondary-cell-note {
       font-size: 10.5px;
-      color: #4B5563;
+      color: #6B6350;
       font-weight: 500;
       line-height: 1.35;
       word-break: break-word;
     }
     .grand-total-row td {
-      background-color: #CBD5E1 !important;
-      border-top: 2px solid #1F2937 !important;
+      background-color: #E2D6B8 !important;
+      border-top: 3px double #133A2E !important;
       font-weight: 700;
       font-size: 12.5px;
-      color: #111827;
+      color: #141413;
       padding: 11px 10px;
     }
     .bottom-banner {
-      background-color: #1D4273;
+      background-color: #133A2E;
       color: #FFFFFF;
       padding: 12px 28px;
       display: flex;
@@ -314,8 +314,8 @@ function getSharedStatementStyles(): string {
       margin-top: auto;
     }
     .bottom-badge {
-      background-color: #E5E7EB;
-      color: #111827;
+      background-color: #F9F5EB;
+      color: #133A2E;
       font-weight: 700;
       padding: 4px 10px;
       border-radius: 3px;
@@ -390,19 +390,20 @@ function buildCashbookReportHtml(params: CashbookPdfReportParams): string {
     : 0;
   const closingBalance = lastDay ? lastDay.total_balance : netBalance;
 
-const netColor = netBalance >= 0 ? "#0D9488" : "#DC2626";
+const netColor = netBalance >= 0 ? "#166534" : "#B91C1C";
+  const netSign = netBalance < 0 ? "- " : netBalance > 0 ? "+ " : "";
   const netSuffix = netBalance < 0 ? " Dr" : netBalance > 0 ? " Cr" : "";
   const isMultiDate = sortedAsc.length > 1;
 
   const tableRowsHtml =
     sortedAsc.length === 0
-      ? `<tr><td colspan="5" style="text-align: center; padding: 24px; color: #6B7280; background-color: #FFFFFF;">No entries found in this date range.</td></tr>`
+      ? `<tr><td colspan="5" style="text-align: center; padding: 24px; color: #6B6350; background-color: #F9F5EB;">No entries found in this date range.</td></tr>`
       : sortedAsc
           .map((row) => {
             const dailyBalColor =
-              row.daily_balance < 0 ? "#EA580C" : "#0D9488";
+              row.daily_balance < 0 ? "#9A3412" : "#166534";
             const totalBalColor =
-              row.total_balance < 0 ? "#EA580C" : "#0D9488";
+              row.total_balance < 0 ? "#9A3412" : "#166534";
             const dailySign = row.daily_balance < 0 ? "- " : "";
             const totalSign = row.total_balance < 0 ? "- " : "";
             const dayEntries = entriesByDate.get(row.entry_date) ?? [];
@@ -413,10 +414,10 @@ const netColor = netBalance >= 0 ? "#0D9488" : "#DC2626";
             const dayHeaderHtml = `
               <tr class="${rowClass}">
                 <td class="col-date">
-                  <div class="primary-cell-title" style="color: ${isMultiDate ? "#1E3A8A" : "#111827"}; font-size: ${isMultiDate ? "13px" : "12px"};">
+                  <div class="primary-cell-title" style="color: ${isMultiDate ? "#133A2E" : "#141413"}; font-size: ${isMultiDate ? "13px" : "12px"};">
                     ${escapeHtml(formatShortDateDisplay(row.entry_date))}
                   </div>
-                  <div class="secondary-cell-note" style="color: ${isMultiDate ? "#1E40AF" : "#4B5563"}; font-weight: 600;">
+                  <div class="secondary-cell-note" style="color: ${isMultiDate ? "#3D3829" : "#6B6350"}; font-weight: 600;">
                     ${row.entry_count} ${row.entry_count === 1 ? "Entry" : "Entries"}
                   </div>
                 </td>
@@ -466,7 +467,8 @@ const netColor = netBalance >= 0 ? "#0D9488" : "#DC2626";
           })
           .join("");
 
-  const closingSign = closingBalance < 0 ? "- " : "";
+const closingSign =
+    closingBalance < 0 ? "- " : closingBalance > 0 ? "+ " : "";
   const grandTotalHtml =
     sortedAsc.length > 0
       ? `
@@ -510,7 +512,7 @@ const netColor = netBalance >= 0 ? "#0D9488" : "#DC2626";
             <div class="summary-card">
               <div class="sum-col">
                 <div class="sum-label">Total IN (+)</div>
-                <div class="sum-main-val" style="color: #0D9488;">
+                <div class="sum-main-val" style="color: #166534;">
                   ${formatCurrency(totalIn, currency, true)}
                 </div>
                 <div class="sum-sub-line">Cash : ${formatCurrency(cashIn, currency, true)}</div>
@@ -521,7 +523,7 @@ const netColor = netBalance >= 0 ? "#0D9488" : "#DC2626";
 
               <div class="sum-col">
                 <div class="sum-label">Total OUT (-)</div>
-                <div class="sum-main-val" style="color: #EA580C;">
+                <div class="sum-main-val" style="color: #9A3412;">
                   ${formatCurrency(totalOut, currency, true)}
                 </div>
                 <div class="sum-sub-line">Cash : ${formatCurrency(cashOut, currency, true)}</div>
@@ -533,17 +535,17 @@ const netColor = netBalance >= 0 ? "#0D9488" : "#DC2626";
               <div class="sum-col">
                 <div class="sum-label">Net Balance</div>
                 <div class="sum-main-val" style="color: ${netColor};">
-                  ${formatCurrency(Math.abs(netBalance), currency, true)}${netSuffix}
+                  ${netSign}${formatCurrency(Math.abs(netBalance), currency, true)}${netSuffix}
                 </div>
                 <div class="sum-sub-line">
                   Opening balance (${escapeHtml(formatShortDateDisplay(startDate))}) :
-                  <span style="color: ${openingBalance < 0 ? "#EA580C" : "#0D9488"}; font-weight: 700;">
+                  <span style="color: ${openingBalance < 0 ? "#9A3412" : "#166534"}; font-weight: 700;">
                     ${openingBalance < 0 ? "- " : ""}${formatCurrency(Math.abs(openingBalance), currency, true)}
                   </span>
                 </div>
                 <div class="sum-sub-line">
                   Closing balance (${escapeHtml(formatShortDateDisplay(endDate))}) :
-                  <span style="color: ${closingBalance < 0 ? "#EA580C" : "#0D9488"}; font-weight: 700;">
+                  <span style="color: ${closingBalance < 0 ? "#9A3412" : "#166534"}; font-weight: 700;">
                     ${closingSign}${formatCurrency(Math.abs(closingBalance), currency, true)}
                   </span>
                 </div>
@@ -660,7 +662,8 @@ function buildCustomerReportHtml(params: CustomerPdfReportParams): string {
   const endDisplay = formatFullDateDisplay(endDate);
 
   const netColor =
-    netBalance < 0 ? "#EA580C" : netBalance > 0 ? "#0D9488" : "#374151";
+    netBalance < 0 ? "#9A3412" : netBalance > 0 ? "#166534" : "#374151";
+  const netSign = netBalance < 0 ? "- " : netBalance > 0 ? "+ " : "";
   const netLabel =
     netBalance < 0
       ? "You will get (Dr)"
@@ -680,7 +683,7 @@ function buildCustomerReportHtml(params: CustomerPdfReportParams): string {
 
   const tableRowsHtml =
     sortedCustomerRowsAsc.length === 0
-      ? `<tr><td colspan="4" style="text-align: center; padding: 24px; color: #6B7280; background-color: #FFFFFF;">No transactions found in this date range.</td></tr>`
+      ? `<tr><td colspan="4" style="text-align: center; padding: 24px; color: #6B6350; background-color: #F9F5EB;">No transactions found in this date range.</td></tr>`
       : sortedCustomerRowsAsc
           .map((row, idx) => {
             const isNewDateGroup =
@@ -696,7 +699,7 @@ function buildCustomerReportHtml(params: CustomerPdfReportParams): string {
               `
               : "";
 
-            const balColor = row.running_balance < 0 ? "#EA580C" : "#0D9488";
+            const balColor = row.running_balance < 0 ? "#9A3412" : "#166534";
             const balSign = row.running_balance < 0 ? "- " : "";
             const noteParts: string[] = [];
             if (showCustomerName && row.customer_name) {
@@ -742,7 +745,7 @@ function buildCustomerReportHtml(params: CustomerPdfReportParams): string {
           <td>Grand Total (${sortedCustomerRowsAsc.length} Entries)</td>
           <td style="text-align: right;">${formatCurrency(totalGave, currency, true)}</td>
           <td style="text-align: right;">${formatCurrency(totalGot, currency, true)}</td>
-          <td style="text-align: right; color: ${netColor};">${netBalance < 0 ? "- " : ""}${formatCurrency(Math.abs(netBalance), currency, true)}</td>
+          <td style="text-align: right; color: ${netColor};">${netSign}${formatCurrency(Math.abs(netBalance), currency, true)}</td>
         </tr>
       `
       : "";
@@ -777,7 +780,7 @@ function buildCustomerReportHtml(params: CustomerPdfReportParams): string {
             <div class="summary-card">
               <div class="sum-col">
                 <div class="sum-label">Total You Gave (-)</div>
-                <div class="sum-main-val" style="color: #EA580C;">
+                <div class="sum-main-val" style="color: #9A3412;">
                   ${formatCurrency(totalGave, currency, true)}
                 </div>
                 <div class="sum-sub-line">Entries : ${gaveCount}</div>
@@ -787,7 +790,7 @@ function buildCustomerReportHtml(params: CustomerPdfReportParams): string {
 
               <div class="sum-col">
                 <div class="sum-label">Total You Got (+)</div>
-                <div class="sum-main-val" style="color: #0D9488;">
+                <div class="sum-main-val" style="color: #166534;">
                   ${formatCurrency(totalGot, currency, true)}
                 </div>
                 <div class="sum-sub-line">Entries : ${gotCount}</div>
@@ -798,7 +801,7 @@ function buildCustomerReportHtml(params: CustomerPdfReportParams): string {
               <div class="sum-col">
                 <div class="sum-label">Net Balance</div>
                 <div class="sum-main-val" style="color: ${netColor};">
-                  ${netBalance < 0 ? "- " : ""}${formatCurrency(Math.abs(netBalance), currency, true)}
+                  ${netSign}${formatCurrency(Math.abs(netBalance), currency, true)}
                 </div>
                 <div class="sum-sub-line">Status : <strong>${netLabel}</strong></div>
               </div>
